@@ -168,7 +168,6 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         await f_folder_list(query.message, 'edit')
     if answer_data == 'create_new_folder':
-        #await query.answer()
         if int(get_curent_user_proj_count()) < 7:
             await f_create_new_folder(query.message)
         else:
