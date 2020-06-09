@@ -1,5 +1,6 @@
 ### PyDejavuBot-
 
+##Region ### START imports section ###
 from threading import Thread  #for using thread
 import time
 import logging
@@ -12,6 +13,7 @@ import json #нужен для работы с json-кодированными �
 import password_generate # фнукции для генерации паролей
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 import urllib.request # for getting files from user
+##EndRegion ### END imports section ###
 
 API_TOKEN = '977180694:AAEXJHs1k3KT5Lmw2oz20QaS5ZGhS8bGY_8' # Initalialization API token for work with Telegram Bot
 
