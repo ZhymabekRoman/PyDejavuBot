@@ -127,23 +127,6 @@ async def send_welcome(message: types.Message):
 
 @dp.callback_query_handler(state='*')
 async def callback_handler(query: types.CallbackQuery, state):
-#    def timer(name):         #TODO
-#        count = 0
-#        while True:
-#            nonlocal  query
-#           global query_global
-#            query_global = query
-#            print(query_global)
-#            time.sleep(6)
-#            count += 1      
-#            print("Hi " + name + " This program has now been running for " + str(count) + " seconds.")
-#    background_thread = Thread(target=timer, args=('fkjdjd',))
-#    background_thread.start()
-#    def xxx():
-#        global query_global
-#        query_global = query
-#        print('xxx work!')
-
     global query_global
     query_global = query
     answer_data = query.data
@@ -369,7 +352,22 @@ async def f_upload_audio_samples_step_2(msg: types.Message, state: FSMContext):
 
 
 
-
+#    def timer(name):         #TODO
+#        count = 0
+#        while True:
+#            nonlocal  query
+#           global query_global
+#            query_global = query
+#            print(query_global)
+#            time.sleep(6)
+#            count += 1      
+#            print("Hi " + name + " This program has now been running for " + str(count) + " seconds.")
+#    background_thread = Thread(target=timer, args=('fkjdjd',))
+#    background_thread.start()
+#    def xxx():
+#        global query_global
+#        query_global = query
+#        print('xxx work!')
 
 
 
