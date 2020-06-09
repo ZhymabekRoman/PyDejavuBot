@@ -1,19 +1,16 @@
-"""
-This is a echo bot.
-It echoes any incoming text messages.
-"""
+#PyDejavuBot- 
 from threading import Thread  #for using thread
 import time
 import logging
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.dispatcher import FSMContext #For FSM
-import sqlite3 #для работа с бд
-import os.path #нужно для извлечения расширения файла 
+from aiogram.dispatcher import FSMContext # for using FSM
+import sqlite3 # for working with DB
+import os.path # need for extract extions of file
 import json #нужен для работы с json-кодированными данными
 import password_generate # фнукции для генерации паролей
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-import urllib.request # request нужен для загрузки файлов от пользователя
+import urllib.request # for getting files from user
 
 API_TOKEN = '977180694:AAEXJHs1k3KT5Lmw2oz20QaS5ZGhS8bGY_8'
 #ConfigureMemoryStorage
