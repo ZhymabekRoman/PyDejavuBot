@@ -9,9 +9,11 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext #For FSM
 import sqlite3 #для работа с бд
+import os.path #нужно для извлечения расширения файла 
 import json #нужен для работы с json-кодированными данными
 import password_generate # фнукции для генерации паролей
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+import urllib.request # request нужен для загрузки файлов от пользователя
 
 API_TOKEN = '977180694:AAEXJHs1k3KT5Lmw2oz20QaS5ZGhS8bGY_8'
 #ConfigureMemoryStorage
@@ -41,7 +43,15 @@ def get_curent_user_proj():
     return json.loads(get_curent_user_data(curent_user_id)[2])
 def get_curent_user_proj_count():
     return  len(get_curent_user_proj())
-
+    
+    
+def get_curent_user_proj_data():
+    get_curent_folders_id = get_curent_user_proj()[curent_folder_name] 
+    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    cur = con.cursor()
+    cur.execute("SELECT * FROM projects Where project_id = '{0}'".format(get_curent_folders_id))
+    return cur.fetchall()[0]
+    con.close()
 
 def get_curent_user_data(curent_user_id):
         con = sqlite3.connect('myTable.db', check_same_thread=False)
@@ -279,13 +289,64 @@ async def upload_audio_samples(message):
         await Upload_Simples.upload_audio_samples_step_2.set()
 
 @dp.message_handler(state= Upload_Simples.upload_audio_samples_step_2, content_types=types.ContentTypes.AUDIO | types.ContentTypes.DOCUMENT)
-async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContext):
-    print('Okkkkk')
-    
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
-    
-    
+async def f_upload_audio_samples_step_2(msg: types.Message, state: FSMContext):
+    #print(msg)
+    document_id = msg.document.file_id
+    file_info = await bot.get_file(document_id)
+    fi = file_info.file_path
+    name = msg.document.file_name
+    curent_file_extensions =  os.path.splitext(name)[1]
+    random_chrt = password_generate.easy_pass(30)
+    get_curent_folders_id = get_curent_user_proj()[curent_folder_name] 
+    if curent_file_extensions in ('.wav', '.mp3', '.wma'):
+        await bot.send_message(msg.from_user.id,  'Идет загрузка файла....Подождите...')
+        #urllib.request.urlretrieve(f'https://api.telegram.org/file/bot{API_TOKEN}/{fi}', 'audio_samples/' + random_chrt + curent_file_extensions)
+        xxx = {}
+        xxx[random_chrt] = name
+      #  dats = get_curent_user_proj_data()
+        #res = {**dats, **xxx}
+        print(get_curent_user_proj_data())
+      #  if get_curent_user_proj_data() == '{}':
+        data_to_add = json.dumps(xxx)
+     #   else:
+           # res = {**get_curent_user_proj_data(), **xxx}
+       #     data_to_add = json.dumps(res)
+      #  data_to_add = json.dumps(xxx)
+        con = sqlite3.connect('myTable.db', check_same_thread=False)
+        cur = con.cursor()
+        cur.execute("UPDATE projects SET data = '{0}' WHERE project_id = '{1}'".format(data_to_add, get_curent_folders_id))
+        con.commit()
+        con.close()
+
+        await bot.send_message(msg.from_user.id, 'Файл успешно сохранён')
+        await f_folder_list(msg, 'start') 
+        await state.finish()
+    else:
+        await bot.send_message(msg.from_user.id, 'Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
+        return
+        
+        
+        
+        
+  
+#@dp.message_handler(content_types=types.ContentTypes.DOCUMENT)
+#async def scan_message(msg: types.Message):
+#    print("get document from user")
+#    document_id = msg.document.file_id
+#    file_info = await bot.get_file(document_id)
+#    fi = file_info.file_path
+#    name = msg.document.file_name
+#    curent_file_extensions =  os.path.splitext(name)[1]
+#    if curent_file_extensions in ('.wav', '.mp3', '.wma'):
+#        print('Will be Ok!')
+#        urllib.request.urlretrieve(f'https://api.telegram.org/file/bot{API_TOKEN}/{fi}', 'audio_samples/' + password_generate.easy_pass(30) + curent_file_extensions)
+#        await bot.send_message(msg.from_user.id, 'Файл успешно сохранён')
+#    else:
+#        print('noooooo')
+#        await bot.send_message(msg.from_user.id, 'Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
+#        #return     #TODO
+#        
+        
 #####TODO 
 #   try:
 #        await bot.send_message(user_id, text, disable_notification=disable_notification)
@@ -305,3 +366,12 @@ if __name__ == '__main__':
 #        log.info(f"Target [ID:{user_id}]: success")
 #        return True
 #    return False
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    executor.start_polling(dp, skip_updates=True)
