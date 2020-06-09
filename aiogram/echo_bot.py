@@ -1,4 +1,5 @@
-#PyDejavuBot- 
+### PyDejavuBot-
+
 from threading import Thread  #for using thread
 import time
 import logging
@@ -12,7 +13,8 @@ import password_generate # фнукции для генерации пароле
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 import urllib.request # for getting files from user
 
-API_TOKEN = '977180694:AAEXJHs1k3KT5Lmw2oz20QaS5ZGhS8bGY_8'
+API_TOKEN = '977180694:AAEXJHs1k3KT5Lmw2oz20QaS5ZGhS8bGY_8' # API token for work with Telegram Bot
+
 #ConfigureMemoryStorage
 memory_storage = MemoryStorage()
 # Configure logging
@@ -21,7 +23,6 @@ logging.basicConfig(level=logging.INFO)
 # Initialize bot and dispatcher
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=memory_storage)
-###########
 
 
 class OrderDrinks(StatesGroup):
