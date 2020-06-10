@@ -44,7 +44,6 @@ def get_curent_user_proj():
 def get_curent_user_proj_count():
     return  len(get_curent_user_proj())
     
-    
 def get_curent_user_proj_data():
     get_curent_folders_id = get_curent_user_proj()[curent_folder_name] 
     con = sqlite3.connect('myTable.db', check_same_thread=False)
