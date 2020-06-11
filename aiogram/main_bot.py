@@ -37,15 +37,16 @@ def cache_update_curent_user_proj():
     global curent_user_proj #initialize global var for acces from anywhere
     curent_user_proj = get_curent_user_proj()
 def get_curent_user_proj_low_case():
-    curent_user_proj = json.loads(get_curent_user_data(curent_user_id)[2])
+    curent_user_proj = json.loads(b_get_curent_user_data(curent_user_id)[2])
     curent_user_proj_in_low_case = dict((k.lower(), v) for k, v in curent_user_proj .items())
     return curent_user_proj_in_low_case
 def get_curent_user_proj():
-    return json.loads(get_curent_user_data(curent_user_id)[2])
+    return json.loads(b_get_curent_user_data(curent_user_id)[2])
 def get_curent_user_proj_count():
     return  len(get_curent_user_proj())
     
-def get_curent_user_proj_data():
+##Region ### START backends section ###
+def b_get_curent_user_proj_data():
     get_curent_folders_id = get_curent_user_proj()[curent_folder_name] 
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
@@ -54,7 +55,7 @@ def get_curent_user_proj_data():
     return cur.fetchall()[0]
     con.close()
 
-def get_curent_user_data(curent_user_id):
+def b_get_curent_user_data(curent_user_id):
         con = sqlite3.connect('myTable.db', check_same_thread=False)
         cur = con.cursor()
         cur.execute("SELECT * FROM users Where User_id= '{0}'".format(curent_user_id))
@@ -82,8 +83,8 @@ def b_delete_project_db(message, folder_name):
 
 def b_set_lang(curent_user_id, lang_name):
     try:
-        if str(get_curent_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
-            print(get_curent_user_data(curent_user_id)[0])
+        if str(b_get_curent_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
+            print(b_get_curent_user_data(curent_user_id)[0])
             con = sqlite3.connect('myTable.db', check_same_thread=False)
             cur = con.cursor()
             cur.execute("UPDATE users SET Lang = '{0}' WHERE User_id = '{1}'".format(lang_name,curent_user_id))
@@ -96,7 +97,7 @@ def b_set_lang(curent_user_id, lang_name):
             con.commit()
             con.close()
 
-async def b_reg_new_folder(folder_name):
+def b_reg_new_folder(folder_name):
     generate_random_chrt = password_generate.easy_pass(30)
     xxx = {}
     xxx[folder_name] = generate_random_chrt
@@ -113,39 +114,19 @@ async def b_reg_new_folder(folder_name):
     con.commit()
     con.close()
     cache_update_curent_user_proj()
-        
-###########
+##EndRegion ### END backends section ###
+
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
     global curent_user_id
     curent_user_id = message.from_user.id
     cache_update_curent_user_proj()
     try:
-        if str(get_curent_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
+        if str(b_get_curent_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
             await f_welcome_message(message, 'send')
     except IndexError: #если текущии юзер не будет найден в db, тогда..
         await f_set_lang(message, 'start')
 
-async def timer(msg):         #TODO
-        count = 0
-        while True:
-           # nonlocal  query
-           #global query_global
-            #query_global = query
-           # print(query_global)
-            time.sleep(1)
-            count += 1
-            print('jdjfjd' + str(count))
-            #await bot.send_message('Файл успешно сохранён' + str(count))
-            #print("Hi " + name + " This program has now been running for " + str(count) + " seconds.")
-
-   # background_thread = Thread(target=timer)
-  
-   # await background_thread.start()
-   
-# run discord_async_method() in the "background"
-#asyncio.get_event_loop().create_task(timer(query.message))
-    
 
 @dp.callback_query_handler(state='*')
 async def callback_handler(query: types.CallbackQuery, state):   
@@ -173,7 +154,7 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
-        lang_btn = types.InlineKeyboardButton('Язык : ' + get_curent_user_data(query.message.chat.id)[1], callback_data= 'edit_lang')
+        lang_btn = types.InlineKeyboardButton('Язык : ' + b_get_curent_user_data(query.message.chat.id)[1], callback_data= 'edit_lang')
         keyboard_markup.row(back_btn,lang_btn)
         await query.message.edit_text("Настройки бота:", reply_markup=keyboard_markup)   
     if answer_data == 'edit_lang':
@@ -221,7 +202,7 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
                  if  list(get_curent_user_proj_low_case())[x] == message.text.lower():
                      await query_global.answer('Данная папка уже существует! Введите другое имя', True)
                      return
-        await b_reg_new_folder(message.text)
+        b_reg_new_folder(message.text)
         #await bot.answer_callback_query(message.call.id, text='Hello', show_alert=True)
         await query_global.answer("Папка " + str(message.text) + " создана!")
         await f_folder_list(message, 'start') 
@@ -308,10 +289,10 @@ async def f_upload_audio_samples_step_2(msg: types.Message, state: FSMContext):
         #urllib.request.urlretrieve(f'https://api.telegram.org/file/bot{API_TOKEN}/{fi}', 'audio_samples/' + random_chrt + curent_file_extensions)
         new_data = {}
         new_data[random_chrt] = name
-        if get_curent_user_proj_data()[1] == '{}':
+        if b_get_curent_user_proj_data()[1] == '{}':
             data_to_add = json.dumps(new_data)
         else:
-            curent_data = json.loads(get_curent_user_proj_data()[1])
+            curent_data = json.loads(b_get_curent_user_proj_data()[1])
             res = {**curent_data, **new_data}
             print(res)
             data_to_add = json.dumps(res)
@@ -330,8 +311,20 @@ async def f_upload_audio_samples_step_2(msg: types.Message, state: FSMContext):
         return
         
         
-        
-        
+##Region ### START TODO section ###
+#def timer(msg):         #TODO
+#        count = 0
+#        while True:
+#            time.sleep(1)
+#            count += 1
+            #print("Hi " + name + " This program has now been running for " + str(count) + " seconds.")
+
+   # background_thread = Thread(target=timer)
+  
+   # await background_thread.start()
+   
+# run discord_async_method() in the "background"
+#asyncio.get_event_loop().create_task(timer(query.message))
   
 #@dp.message_handler(content_types=types.ContentTypes.DOCUMENT)
 #async def scan_message(msg: types.Message):
@@ -370,17 +363,7 @@ async def f_upload_audio_samples_step_2(msg: types.Message, state: FSMContext):
 #        log.info(f"Target [ID:{user_id}]: success")
 #        return True
 #    return False
-
-
-
-
-#    def xxx():
-#        global query_global
-#        query_global = query
-#        print('xxx work!')
-
-
+##EndRegion ### END TODO section ###
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
-    print('tnt')
