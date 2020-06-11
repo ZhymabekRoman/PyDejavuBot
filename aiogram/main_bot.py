@@ -33,9 +33,17 @@ class OrderDrinks(StatesGroup):
 class Upload_Simples(StatesGroup):
     upload_audio_samples_step_2 = State()
 
+#initialize global vars for acces from anywhere
 def cache_update_curent_user_proj():
-    global curent_user_proj #initialize global var for acces from anywhere
+    global curent_user_proj
     curent_user_proj = get_curent_user_proj()
+def cache_update_curent_user_id(msg):
+    global curent_user_id
+    curent_user_id = msg.from_user.id
+def cache_update_query_global(query_data):
+    global query_global
+    query_global = query_data
+
 def get_curent_user_proj_low_case():
     curent_user_proj = json.loads(b_get_curent_user_data(curent_user_id)[2])
     curent_user_proj_in_low_case = dict((k.lower(), v) for k, v in curent_user_proj .items())
@@ -51,7 +59,6 @@ def b_get_curent_user_proj_data():
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
     cur.execute("SELECT * FROM projects Where project_id = '{0}'".format(get_curent_folders_id))
-    #print(cur.fetchall()[0])
     return cur.fetchall()[0]
     con.close()
 
@@ -99,13 +106,13 @@ def b_set_lang(curent_user_id, lang_name):
 
 def b_reg_new_folder(folder_name):
     generate_random_chrt = password_generate.easy_pass(30)
-    xxx = {}
-    xxx[folder_name] = generate_random_chrt
+    new_data = {}
+    new_data[folder_name] = generate_random_chrt
     get_projects = get_curent_user_proj()
     if get_projects == '{}':
-        data_to_add = json.dumps(xxx)
+        data_to_add = json.dumps(new_data)
     else:
-        res = {**get_projects, **xxx}
+        res = {**get_projects, **new_data}
         data_to_add = json.dumps(res)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
@@ -118,8 +125,7 @@ def b_reg_new_folder(folder_name):
 
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
-    global curent_user_id
-    curent_user_id = message.from_user.id
+    cache_update_curent_user_id(message)
     cache_update_curent_user_proj()
     try:
         if str(b_get_curent_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
@@ -129,9 +135,10 @@ async def send_welcome(message: types.Message):
 
 
 @dp.callback_query_handler(state='*')
-async def callback_handler(query: types.CallbackQuery, state):   
-    global query_global
-    query_global = query
+async def callback_handler(query: types.CallbackQuery, state):
+    cache_update_curent_user_id(query.message)
+    cache_update_curent_user_proj()
+    cache_update_query_global(query)
     answer_data = query.data
     if answer_data == 'welcome_msg':
         await query.answer()
