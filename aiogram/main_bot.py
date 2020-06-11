@@ -4,6 +4,7 @@
 from threading import Thread  #for using thread
 import time
 import logging
+import asyncio
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext # for using FSM
@@ -33,8 +34,8 @@ class Upload_Simples(StatesGroup):
     upload_audio_samples_step_2 = State()
 
 def cache_update_curent_user_proj():
-    global gogen #initialize global var for acces from anywhere
-    gogen = get_curent_user_proj()
+    global curent_user_proj #initialize global var for acces from anywhere
+    curent_user_proj = get_curent_user_proj()
 def get_curent_user_proj_low_case():
     curent_user_proj = json.loads(get_curent_user_data(curent_user_id)[2])
     curent_user_proj_in_low_case = dict((k.lower(), v) for k, v in curent_user_proj .items())
@@ -49,6 +50,7 @@ def get_curent_user_proj_data():
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
     cur.execute("SELECT * FROM projects Where project_id = '{0}'".format(get_curent_folders_id))
+    #print(cur.fetchall()[0])
     return cur.fetchall()[0]
     con.close()
 
@@ -113,7 +115,7 @@ async def b_reg_new_folder(folder_name):
     cache_update_curent_user_proj()
         
 ###########
-@dp.message_handler(commands=['start'])
+@dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
     global curent_user_id
     curent_user_id = message.from_user.id
@@ -124,8 +126,29 @@ async def send_welcome(message: types.Message):
     except IndexError: #если текущии юзер не будет найден в db, тогда..
         await f_set_lang(message, 'start')
 
+async def timer(msg):         #TODO
+        count = 0
+        while True:
+           # nonlocal  query
+           #global query_global
+            #query_global = query
+           # print(query_global)
+            time.sleep(1)
+            count += 1
+            print('jdjfjd' + str(count))
+            #await bot.send_message('Файл успешно сохранён' + str(count))
+            #print("Hi " + name + " This program has now been running for " + str(count) + " seconds.")
+
+   # background_thread = Thread(target=timer)
+  
+   # await background_thread.start()
+   
+# run discord_async_method() in the "background"
+#asyncio.get_event_loop().create_task(timer(query.message))
+    
+
 @dp.callback_query_handler(state='*')
-async def callback_handler(query: types.CallbackQuery, state):
+async def callback_handler(query: types.CallbackQuery, state):   
     global query_global
     query_global = query
     answer_data = query.data
@@ -178,11 +201,11 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer("Папка " + str(curent_folder_name) + " удалена!")
         await query.answer()
         await f_folder_list(query.message, 'edit')
-    for w in range(len(gogen)):
-        if answer_data == list(gogen)[w]:
+    for w in range(len(curent_user_proj)):
+        if answer_data == list(curent_user_proj)[w]:
             await state.finish()
             await query.answer()
-            await manage_projects(query.message, str(list(gogen)[w]))
+            await manage_projects(query.message, str(list(curent_user_proj)[w]))
   
 async def f_create_new_folder(message, type_start = 'send'):
         keyboard_markup = types.InlineKeyboardMarkup()
@@ -283,17 +306,16 @@ async def f_upload_audio_samples_step_2(msg: types.Message, state: FSMContext):
     if curent_file_extensions in ('.wav', '.mp3', '.wma'):
         await bot.send_message(msg.from_user.id,  'Идет загрузка файла....Подождите...')
         #urllib.request.urlretrieve(f'https://api.telegram.org/file/bot{API_TOKEN}/{fi}', 'audio_samples/' + random_chrt + curent_file_extensions)
-        xxx = {}
-        xxx[random_chrt] = name
-      #  dats = get_curent_user_proj_data()
-        #res = {**dats, **xxx}
-        print(get_curent_user_proj_data())
-      #  if get_curent_user_proj_data() == '{}':
-        data_to_add = json.dumps(xxx)
-     #   else:
-           # res = {**get_curent_user_proj_data(), **xxx}
-       #     data_to_add = json.dumps(res)
-      #  data_to_add = json.dumps(xxx)
+        new_data = {}
+        new_data[random_chrt] = name
+        if get_curent_user_proj_data()[1] == '{}':
+            data_to_add = json.dumps(new_data)
+        else:
+            curent_data = json.loads(get_curent_user_proj_data()[1])
+            res = {**curent_data, **new_data}
+            print(res)
+            data_to_add = json.dumps(res)
+             
         con = sqlite3.connect('myTable.db', check_same_thread=False)
         cur = con.cursor()
         cur.execute("UPDATE projects SET data = '{0}' WHERE project_id = '{1}'".format(data_to_add, get_curent_folders_id))
@@ -351,18 +373,7 @@ async def f_upload_audio_samples_step_2(msg: types.Message, state: FSMContext):
 
 
 
-#    def timer(name):         #TODO
-#        count = 0
-#        while True:
-#            nonlocal  query
-#           global query_global
-#            query_global = query
-#            print(query_global)
-#            time.sleep(6)
-#            count += 1      
-#            print("Hi " + name + " This program has now been running for " + str(count) + " seconds.")
-#    background_thread = Thread(target=timer, args=('fkjdjd',))
-#    background_thread.start()
+
 #    def xxx():
 #        global query_global
 #        query_global = query
@@ -372,3 +383,4 @@ async def f_upload_audio_samples_step_2(msg: types.Message, state: FSMContext):
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
+    print('tnt')
