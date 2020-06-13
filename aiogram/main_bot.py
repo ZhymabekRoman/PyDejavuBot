@@ -28,18 +28,26 @@ bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=memory_storage)
 
 
-class OrderDrinks(StatesGroup):
+class Create_Folders(StatesGroup):
     create_new_folder_step_2 = State()
 class Upload_Simples(StatesGroup):
     upload_audio_samples_step_2 = State()
+    upload_audio_samples_step_3 = State()
 
 #initialize global vars for acces from anywhere
 def cache_update_curent_user_proj():
     global curent_user_proj
-    curent_user_proj = get_curent_user_proj()
+    try:
+        curent_user_proj = get_curent_user_proj()
+    except TypeError:
+    	curent_user_proj = ""
+def cache_update_curent_folder_name(folder_name):
+    global curent_folder_name
+    curent_folder_name = folder_name
 def cache_update_curent_user_id(msg):
     global curent_user_id
-    curent_user_id = msg.from_user.id
+    curent_user_id = msg.chat.id
+    print(curent_user_id)
 def cache_update_query_global(query_data):
     global query_global
     query_global = query_data
@@ -62,11 +70,11 @@ def b_get_curent_user_proj_data():
     return cur.fetchall()[0]
     con.close()
 
-def b_get_curent_user_data(curent_user_id):
+def b_get_curent_user_data(curent_user_id_1):
         con = sqlite3.connect('myTable.db', check_same_thread=False)
         cur = con.cursor()
-        cur.execute("SELECT * FROM users Where User_id= '{0}'".format(curent_user_id))
-        return cur.fetchall()[0]
+        cur.execute("SELECT * FROM users Where user_id= '{0}'".format(curent_user_id_1))
+        return cur.fetchone()
         con.close()
         
 def b_delete_project_db(message, folder_name):
@@ -97,7 +105,7 @@ def b_set_lang(curent_user_id, lang_name):
             cur.execute("UPDATE users SET Lang = '{0}' WHERE User_id = '{1}'".format(lang_name,curent_user_id))
             con.commit()
             con.close()
-    except IndexError: #если текущии юзер не будет найден в db, тoгда...')
+    except TypeError: #если текущии юзер не будет найден в db, тoгда...')
             con = sqlite3.connect('myTable.db', check_same_thread=False)
             cur = con.cursor()
             cur.execute("INSERT INTO users VALUES ('{0}', '{1}', '{2}')".format(curent_user_id, lang_name, '{}'))
@@ -126,13 +134,34 @@ def b_reg_new_folder(folder_name):
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
     cache_update_curent_user_id(message)
-    cache_update_curent_user_proj()
+
+    print("First test - " + str(curent_user_id))
+    print("Lenin test - " + str((b_get_curent_user_data(curent_user_id))))
+
+    #str((cur.fetchone())[0]))
+    #cache_update_curent_user_proj()
     try:
-        if str(b_get_curent_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
+        if str((b_get_curent_user_data(curent_user_id))[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
+            print("1")
+            cache_update_curent_user_proj()
             await f_welcome_message(message, 'send')
-    except IndexError: #если текущии юзер не будет найден в db, тогда..
+        else:
+        	print("else except")
+    except TypeError: #если текущии юзер не будет найден в db, тогда..
+        print("2")
         await f_set_lang(message, 'start')
 
+async def f_welcome_message(message: types.Message, type_start):
+    keyboard_markup = types.InlineKeyboardMarkup()
+    folder_list_btns = types.InlineKeyboardButton('Папки', callback_data= 'folders_list')
+    about_btns = types.InlineKeyboardButton('О боте 🤖', callback_data= 'about_bot')
+    setings_btns = types.InlineKeyboardButton('Настройки ⚙', callback_data= 'bot_settings')
+    keyboard_markup.row(folder_list_btns)
+    keyboard_markup.row(about_btns, setings_btns)
+    if type_start == 'edit':
+        await message.edit_text("Меню : ", reply_markup=keyboard_markup)
+    elif type_start == 'send':
+        await message.reply("Меню : ", reply_markup=keyboard_markup)
 
 @dp.callback_query_handler(state='*')
 async def callback_handler(query: types.CallbackQuery, state):
@@ -200,9 +229,9 @@ async def f_create_new_folder(message, type_start = 'send'):
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
         keyboard_markup.row(back_btn)
         await message.edit_text("Введите название вашей папки : ", reply_markup=keyboard_markup)   
-        await OrderDrinks.create_new_folder_step_2.set()
+        await Create_Folders.create_new_folder_step_2.set()
 
-@dp.message_handler(state= OrderDrinks.create_new_folder_step_2, content_types=types.ContentTypes.TEXT)
+@dp.message_handler(state= Create_Folders.create_new_folder_step_2, content_types=types.ContentTypes.TEXT)
 async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     if len(message.text) <=  int(10): #если длина папки будет меньше 10 символов, тогда ..... 
         for x in range(get_curent_user_proj_count()):
@@ -210,7 +239,6 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
                      await query_global.answer('Данная папка уже существует! Введите другое имя', True)
                      return
         b_reg_new_folder(message.text)
-        #await bot.answer_callback_query(message.call.id, text='Hello', show_alert=True)
         await query_global.answer("Папка " + str(message.text) + " создана!")
         await f_folder_list(message, 'start') 
         await state.finish()
@@ -234,33 +262,23 @@ async def f_set_lang(message : types.Message, type_start= 'start' ):
 async def f_folder_list(message : types.Message, type_start):
     keyboard_markup = types.InlineKeyboardMarkup()
     create_new_folder_btn = types.InlineKeyboardButton('Создать новую папку 🗂', callback_data= 'create_new_folder')
-    #print(range(get_curent_user_proj_count()))
     keyboard_markup.row(create_new_folder_btn)
+
     for x in range(get_curent_user_proj_count()):
         text_data_btn = str(list(get_curent_user_proj())[x])
         y = types.InlineKeyboardButton(text_data_btn, callback_data= text_data_btn)
         keyboard_markup.row(y)
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
     keyboard_markup.row(back_btn)
+    
+
     if type_start == 'start':
         await message.answer("Please select your language:", reply_markup=keyboard_markup)
     elif type_start == 'edit':
         await message.edit_text("Please select your language:", reply_markup=keyboard_markup)
     
-
-async def f_welcome_message(message: types.Message, type_start):
-    keyboard_markup = types.InlineKeyboardMarkup()
-    folder_list_btns = types.InlineKeyboardButton('Папки', callback_data= 'folders_list')
-    about_btns = types.InlineKeyboardButton('О боте 🤖', callback_data= 'about_bot')
-    setings_btns = types.InlineKeyboardButton('Настройки ⚙', callback_data= 'bot_settings')
-    keyboard_markup.row(folder_list_btns)
-    keyboard_markup.row(about_btns, setings_btns)
-    if type_start == 'edit':
-        await message.edit_text("Меню : ", reply_markup=keyboard_markup)
-    elif type_start == 'send':
-        await message.reply("Меню : ", reply_markup=keyboard_markup)
         
-async def manage_projects(message,proj_name):
+async def manage_projects(message, folder_name):
     keyboard_markup = types.InlineKeyboardMarkup()
     delete_btn = types.InlineKeyboardButton('Удалить папкy 🗑', callback_data= 'folder_delete')
     keyboard_markup.row(delete_btn)
@@ -269,10 +287,17 @@ async def manage_projects(message,proj_name):
     
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
     keyboard_markup.row(back_btn)
-    await message.edit_text("Вы работаете с проектом : " + str(proj_name) + "\nВаши действия - ", reply_markup=keyboard_markup)
-    global curent_folder_name
-    curent_folder_name = proj_name
-
+    
+    cache_update_curent_folder_name(folder_name)
+    vat = ""
+    for  x in range(len(json.loads(b_get_curent_user_proj_data()[1]))):
+        #print(str(list(json.loads(b_get_curent_user_proj_data()[1]))[x]))
+        
+        vat+= str(list(json.loads(b_get_curent_user_proj_data()[1]))[x]) + "\n"
+        print(vat)
+    await message.edit_text("Вы работаете с папкой : " + str(folder_name) + "\n" + 
+                        "Список аудио сэмлов : \n" + vat
+                        + "\n"+ "\nВаши действия - ", reply_markup=keyboard_markup)
     
 async def upload_audio_samples(message):
         keyboard_markup = types.InlineKeyboardMarkup()
@@ -281,27 +306,71 @@ async def upload_audio_samples(message):
         await message.edit_text("Вы работаете с папкой : " + str(curent_folder_name) + "\nЖду от тебя аудио сэмплы", reply_markup=keyboard_markup)
         await Upload_Simples.upload_audio_samples_step_2.set()
 
+
 @dp.message_handler(state= Upload_Simples.upload_audio_samples_step_2, content_types=types.ContentTypes.AUDIO | types.ContentTypes.DOCUMENT)
-async def f_upload_audio_samples_step_2(msg: types.Message, state: FSMContext):
-    #print(msg)
-    document_id = msg.document.file_id
+async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContext):
+        keyboard_markup = types.InlineKeyboardMarkup()
+        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
+        keyboard_markup.row(back_btn)
+        await bot.send_message(message.from_user.id, "Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
+    
+    
+    
+#    if len(message.text) <=  int(10): #если длина папки будет меньше 10 символов, тогда ..... 
+#        for x in range(get_curent_user_proj_count()):
+#                 if  list(get_curent_user_proj_low_case())[x] == message.text.lower():
+#                     await query_global.answer('Данная папка уже существует! Введите другое имя', True)
+#                     return
+#        b_reg_new_folder(message.text)
+#        await query_global.answer("Папка " + str(message.text) + " создана!")
+#        await f_folder_list(message, 'start') 
+#        await state.finish()
+#    else:
+#        await query_global.answer('Название папки превышает 10 символов', True)
+#        await message.delete()
+#        #await state.finish()
+#        #await f_create_new_folder(message[-1])    #TODO
+#        return
+        
+        global first_data
+        first_data = message.document.file_id
+        global second_data
+        second_data = message.document.file_name
+        
+        #await state.update_data(recive_data= message.document.file_id, recive_data_1 = message.document.file_name)
+        await Upload_Simples.upload_audio_samples_step_3.set()
+    
+    
+    
+@dp.message_handler(state= Upload_Simples.upload_audio_samples_step_3, content_types=types.ContentTypes.TEXT)
+async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
+    #document_id = msg.document.file_id
+    #print(await state.get_data())
+    #document_id = await state.get_data()['recive_data']
+    document_id = first_data
     file_info = await bot.get_file(document_id)
     fi = file_info.file_path
-    name = msg.document.file_name
-    curent_file_extensions =  os.path.splitext(name)[1]
+    for x in range(len(json.loads(b_get_curent_user_proj_data()[1]))):
+        if str(list(json.loads(b_get_curent_user_proj_data()[1]))[x]) == msg.text:
+            await bot.send_message(msg.from_user.id, "Данная запись уже существует, введите другое имя : ")
+            return
+    name = msg.text
+    #name_file = msg.document.file_name
+    #name_file = await state.get_data()['recive_data_1']
+    name_file = second_data
+    curent_file_extensions =  os.path.splitext(name_file)[1]
     random_chrt = password_generate.easy_pass(30)
     get_curent_folders_id = get_curent_user_proj()[curent_folder_name] 
     if curent_file_extensions in ('.wav', '.mp3', '.wma'):
         await bot.send_message(msg.from_user.id,  'Идет загрузка файла....Подождите...')
         #urllib.request.urlretrieve(f'https://api.telegram.org/file/bot{API_TOKEN}/{fi}', 'audio_samples/' + random_chrt + curent_file_extensions)
         new_data = {}
-        new_data[random_chrt] = name
+        new_data[name] = random_chrt
         if b_get_curent_user_proj_data()[1] == '{}':
             data_to_add = json.dumps(new_data)
         else:
             curent_data = json.loads(b_get_curent_user_proj_data()[1])
             res = {**curent_data, **new_data}
-            print(res)
             data_to_add = json.dumps(res)
              
         con = sqlite3.connect('myTable.db', check_same_thread=False)
