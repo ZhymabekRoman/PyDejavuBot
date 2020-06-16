@@ -33,14 +33,15 @@ class Create_Folders(StatesGroup):
 class Upload_Simples(StatesGroup):
     upload_audio_samples_step_2 = State()
     upload_audio_samples_step_3 = State()
+    upload_audio_samples_step_4 = State()
 
 #initialize global vars for acces from anywhere
 def cache_update_curent_user_proj():
-    global curent_user_proj
     try:
+        global curent_user_proj
         curent_user_proj = get_curent_user_proj()
-    except TypeError:
-    	curent_user_proj = ""
+    except:
+        curent_user_proj = "None"
 def cache_update_curent_folder_name(folder_name):
     global curent_folder_name
     curent_folder_name = folder_name
@@ -134,22 +135,12 @@ def b_reg_new_folder(folder_name):
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
     cache_update_curent_user_id(message)
-
-    print("First test - " + str(curent_user_id))
-    print("Lenin test - " + str((b_get_curent_user_data(curent_user_id))))
-
-    #str((cur.fetchone())[0]))
-    #cache_update_curent_user_proj()
-    try:
-        if str((b_get_curent_user_data(curent_user_id))[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
-            print("1")
-            cache_update_curent_user_proj()
-            await f_welcome_message(message, 'send')
-        else:
-        	print("else except")
-    except TypeError: #если текущии юзер не будет найден в db, тогда..
-        print("2")
+    cache_update_curent_user_proj()
+    if str(b_get_curent_user_data(curent_user_id)) == str("None"): #если текущии юзер найден в db, тогда....
+        print("Yes")
         await f_set_lang(message, 'start')
+    elif str((b_get_curent_user_data(curent_user_id))[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
+        await f_welcome_message(message, 'send')
 
 async def f_welcome_message(message: types.Message, type_start):
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -291,11 +282,9 @@ async def manage_projects(message, folder_name):
     cache_update_curent_folder_name(folder_name)
     vat = ""
     for  x in range(len(json.loads(b_get_curent_user_proj_data()[1]))):
-        #print(str(list(json.loads(b_get_curent_user_proj_data()[1]))[x]))
-        
         vat+= str(list(json.loads(b_get_curent_user_proj_data()[1]))[x]) + "\n"
         print(vat)
-    await message.edit_text("Вы работаете с папкой : " + str(folder_name) + "\n" + 
+    await message.edit_text("Вы работаете с папкой : " + str(folder_name) + "\n" + "\n" + 
                         "Список аудио сэмлов : \n" + vat
                         + "\n"+ "\nВаши действия - ", reply_markup=keyboard_markup)
     
@@ -313,25 +302,7 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
         keyboard_markup.row(back_btn)
         await bot.send_message(message.from_user.id, "Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
-    
-    
-    
-#    if len(message.text) <=  int(10): #если длина папки будет меньше 10 символов, тогда ..... 
-#        for x in range(get_curent_user_proj_count()):
-#                 if  list(get_curent_user_proj_low_case())[x] == message.text.lower():
-#                     await query_global.answer('Данная папка уже существует! Введите другое имя', True)
-#                     return
-#        b_reg_new_folder(message.text)
-#        await query_global.answer("Папка " + str(message.text) + " создана!")
-#        await f_folder_list(message, 'start') 
-#        await state.finish()
-#    else:
-#        await query_global.answer('Название папки превышает 10 символов', True)
-#        await message.delete()
-#        #await state.finish()
-#        #await f_create_new_folder(message[-1])    #TODO
-#        return
-        
+
         global first_data
         first_data = message.document.file_id
         global second_data
@@ -380,13 +351,28 @@ async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
         con.close()
 
         await bot.send_message(msg.from_user.id, 'Файл успешно сохранён')
-        await f_folder_list(msg, 'start') 
-        await state.finish()
+        
     else:
         await bot.send_message(msg.from_user.id, 'Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
         return
+    
+    keyboard_markup = types.InlineKeyboardMarkup()
+    back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
+    keyboard_markup.row(back_btn)
+    await bot.send_message(message.from_user.id, "Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
+
+    await Upload_Simples.upload_audio_samples_step_4.set()
         
         
+@dp.message_handler(state= Upload_Simples.upload_audio_samples_step_4, content_types=types.ContentTypes.TEXT)
+async def f_upload_audio_samples_step_4(msg: types.Message, state: FSMContext):
+    
+    
+    
+    
+    
+    await f_folder_list(msg, 'start') 
+    await state.finish()
 ##Region ### START TODO section ###
 #def timer(msg):         #TODO
 #        count = 0
