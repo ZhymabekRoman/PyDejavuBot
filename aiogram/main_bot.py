@@ -2,6 +2,7 @@
 
 ##Region ### START imports section ###
 from threading import Thread  #for using thread
+import config
 import time
 import logging
 import asyncio
@@ -16,12 +17,13 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 import urllib.request # for getting files from user
 ##EndRegion ### END imports section ###
 
-API_TOKEN = '977180694:AAEXJHs1k3KT5Lmw2oz20QaS5ZGhS8bGY_8' # Initalialization API token for work with Telegram Bot
+API_TOKEN = config.API_TOKEN # Initalialization API token for work with Telegram Bot
 
 #ConfigureMemoryStorage
 memory_storage = MemoryStorage()
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.DEBUG) 
 
 # Initialize bot and dispatcher
 bot = Bot(token=API_TOKEN)
@@ -48,12 +50,11 @@ def cache_update_curent_folder_name(folder_name):
 def cache_update_curent_user_id(msg):
     global curent_user_id
     curent_user_id = msg.chat.id
-    print(curent_user_id)
 def cache_update_query_global(query_data):
     global query_global
     query_global = query_data
 
-def get_curent_user_proj_low_case():
+def get_curent_user_proj_in_low_case():
     curent_user_proj = json.loads(b_get_curent_user_data(curent_user_id)[2])
     curent_user_proj_in_low_case = dict((k.lower(), v) for k, v in curent_user_proj .items())
     return curent_user_proj_in_low_case
@@ -96,17 +97,22 @@ def b_delete_project_db(message, folder_name):
     con.commit()
     con.close()
     cache_update_curent_user_proj()
-
+    
 def b_set_lang(curent_user_id, lang_name):
     try:
+        print("b set lang")
+        print(type(b_get_curent_user_data(curent_user_id)[0]))
+        print(curent_user_id)
         if str(b_get_curent_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
+            print("1")
             print(b_get_curent_user_data(curent_user_id)[0])
             con = sqlite3.connect('myTable.db', check_same_thread=False)
             cur = con.cursor()
             cur.execute("UPDATE users SET Lang = '{0}' WHERE User_id = '{1}'".format(lang_name,curent_user_id))
             con.commit()
             con.close()
-    except TypeError: #если текущии юзер не будет найден в db, тoгда...')
+    except TypeError: #если текущии юзер не будет найден в db, тoгда...
+            print("2")
             con = sqlite3.connect('myTable.db', check_same_thread=False)
             cur = con.cursor()
             cur.execute("INSERT INTO users VALUES ('{0}', '{1}', '{2}')".format(curent_user_id, lang_name, '{}'))
@@ -136,8 +142,7 @@ def b_reg_new_folder(folder_name):
 async def send_welcome(message: types.Message):
     cache_update_curent_user_id(message)
     cache_update_curent_user_proj()
-    if str(b_get_curent_user_data(curent_user_id)) == str("None"): #если текущии юзер найден в db, тогда....
-        print("Yes")
+    if b_get_curent_user_data(curent_user_id) is None: #если текущии юзер не найден в db, тогда....
         await f_set_lang(message, 'start')
     elif str((b_get_curent_user_data(curent_user_id))[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
         await f_welcome_message(message, 'send')
@@ -226,7 +231,7 @@ async def f_create_new_folder(message, type_start = 'send'):
 async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     if len(message.text) <=  int(10): #если длина папки будет меньше 10 символов, тогда ..... 
         for x in range(get_curent_user_proj_count()):
-                 if  list(get_curent_user_proj_low_case())[x] == message.text.lower():
+                 if  list(get_curent_user_proj_in_low_case())[x] == message.text.lower():
                      await query_global.answer('Данная папка уже существует! Введите другое имя', True)
                      return
         b_reg_new_folder(message.text)
