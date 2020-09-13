@@ -41,7 +41,7 @@ class Upload_Simples(StatesGroup):
 def cache_update_curent_user_proj():
     try:
         global curent_user_proj
-        curent_user_proj = get_curent_user_proj()
+        curent_user_proj = b_get_user_folders_list_with_keys(curent_user_id)
     except:
         curent_user_proj = "None"
 def cache_update_curent_folder_name(folder_name):
@@ -54,33 +54,35 @@ def cache_update_query_global(query_data):
     global query_global
     query_global = query_data
 
-def get_curent_user_proj_in_low_case():
-    curent_user_proj = json.loads(b_get_curent_user_data(curent_user_id)[2])
-    curent_user_proj_in_low_case = dict((k.lower(), v) for k, v in curent_user_proj .items())
-    return curent_user_proj_in_low_case
-def get_curent_user_proj():
-    return json.loads(b_get_curent_user_data(curent_user_id)[2])
-def get_curent_user_proj_count():
-    return  len(get_curent_user_proj())
     
 ##Region ### START backends section ###
+def b_get_user_folders_list_with_keys(user_id):
+    return json.loads(b_get_user_data(user_id)[2]) #расшифровывем json кодированные данные
+
+def b_get_user_folders_list_with_keys_in_low_case(user_id):
+    return dict((k.lower(), v) for k, v in  json.loads(b_get_user_data(user_id)[2]).items())
+
+def b_get_user_folders_count(user_id):
+    return  len(b_get_user_folders_list_with_keys(user_id))
+
 def b_get_curent_user_proj_data():
-    get_curent_folders_id = get_curent_user_proj()[curent_folder_name] 
+    get_curent_folders_id = b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name] 
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
     cur.execute("SELECT * FROM projects Where project_id = '{0}'".format(get_curent_folders_id))
     return cur.fetchall()[0]
     con.close()
 
-def b_get_curent_user_data(curent_user_id_1):
+def b_get_user_data(user_id):
         con = sqlite3.connect('myTable.db', check_same_thread=False)
         cur = con.cursor()
-        cur.execute("SELECT * FROM users Where user_id= '{0}'".format(curent_user_id_1))
+        cur.execute("SELECT * FROM users Where user_id= '{0}'".format(user_id))
+        con = sqlite3.connect('myTable.db', check_same_thread=False)
         return cur.fetchone()
         con.close()
         
-def b_delete_project_db(message, folder_name):
-    get_projects = get_curent_user_proj()
+def b_delete_folder(user_id, folder_name):
+    get_projects = b_get_user_folders_list_with_keys(user_id)
     for proj_name, proj_id in get_projects.items():
         if  proj_name== folder_name:
             print(proj_id)
@@ -93,29 +95,22 @@ def b_delete_project_db(message, folder_name):
     data_to_add = json.dumps(get_projects)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
+    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, user_id))
     con.commit()
     con.close()
     cache_update_curent_user_proj()
     
-def b_set_lang(curent_user_id, lang_name):
-    try:
-        print("b set lang")
-        print(type(b_get_curent_user_data(curent_user_id)[0]))
-        print(curent_user_id)
-        if str(b_get_curent_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
-            print("1")
-            print(b_get_curent_user_data(curent_user_id)[0])
+def b_set_lang(user_id, lang_name):
+        if b_get_user_data(user_id) is None: #если текущии юзер не будет найден в db, тoгда...
             con = sqlite3.connect('myTable.db', check_same_thread=False)
             cur = con.cursor()
-            cur.execute("UPDATE users SET Lang = '{0}' WHERE User_id = '{1}'".format(lang_name,curent_user_id))
+            cur.execute("INSERT INTO users VALUES ('{0}', '{1}', '{2}')".format(user_id, lang_name, '{}'))
             con.commit()
             con.close()
-    except TypeError: #если текущии юзер не будет найден в db, тoгда...
-            print("2")
+        elif str(b_get_user_data(user_id)[0]) == str(user_id): #если текущии юзер найден в db, тогда....
             con = sqlite3.connect('myTable.db', check_same_thread=False)
             cur = con.cursor()
-            cur.execute("INSERT INTO users VALUES ('{0}', '{1}', '{2}')".format(curent_user_id, lang_name, '{}'))
+            cur.execute("UPDATE users SET Lang = '{0}' WHERE User_id = '{1}'".format(lang_name, user_id))
             con.commit()
             con.close()
 
@@ -123,7 +118,7 @@ def b_reg_new_folder(folder_name):
     generate_random_chrt = password_generate.easy_pass(30)
     new_data = {}
     new_data[folder_name] = generate_random_chrt
-    get_projects = get_curent_user_proj()
+    get_projects = b_get_user_folders_list_with_keys(curent_user_id)
     if get_projects == '{}':
         data_to_add = json.dumps(new_data)
     else:
@@ -142,10 +137,10 @@ def b_reg_new_folder(folder_name):
 async def send_welcome(message: types.Message):
     cache_update_curent_user_id(message)
     cache_update_curent_user_proj()
-    if b_get_curent_user_data(curent_user_id) is None: #если текущии юзер не найден в db, тогда....
+    if b_get_user_data(curent_user_id) is None: #если текущии юзер не найден в db, тогда....
         await f_set_lang(message, 'start')
-    elif str((b_get_curent_user_data(curent_user_id))[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
-        await f_welcome_message(message, 'send')
+    elif str((b_get_user_data(curent_user_id))[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
+        await f_welcome_message(message, 'reply')
 
 async def f_welcome_message(message: types.Message, type_start):
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -156,7 +151,7 @@ async def f_welcome_message(message: types.Message, type_start):
     keyboard_markup.row(about_btns, setings_btns)
     if type_start == 'edit':
         await message.edit_text("Меню : ", reply_markup=keyboard_markup)
-    elif type_start == 'send':
+    elif type_start == 'reply':
         await message.reply("Меню : ", reply_markup=keyboard_markup)
 
 @dp.callback_query_handler(state='*')
@@ -186,7 +181,7 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
-        lang_btn = types.InlineKeyboardButton('Язык : ' + b_get_curent_user_data(query.message.chat.id)[1], callback_data= 'edit_lang')
+        lang_btn = types.InlineKeyboardButton('Язык : ' + b_get_user_data(query.message.chat.id)[1], callback_data= 'edit_lang')
         keyboard_markup.row(back_btn,lang_btn)
         await query.message.edit_text("Настройки бота:", reply_markup=keyboard_markup)   
     if answer_data == 'edit_lang':
@@ -196,7 +191,7 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         await f_folder_list(query.message, 'edit')
     if answer_data == 'create_new_folder':
-        if int(get_curent_user_proj_count()) < 7:
+        if int(b_get_user_folders_count(curent_user_id)) < 7:
             await f_create_new_folder(query.message)
         else:
             await query.answer('Список папок превышает 7', True)
@@ -208,9 +203,10 @@ async def callback_handler(query: types.CallbackQuery, state):
         keyboard_markup.row(back_btn)
         await query.message.edit_text("Вы действительно хотите удалить папку?\nЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ!", reply_markup=keyboard_markup)
     if answer_data == 'upload_audio_samples':
+        await query.answer()
         await upload_audio_samples(query.message)
     if answer_data == 'process_to_delete_folder':
-        b_delete_project_db(query.message, curent_folder_name)
+        b_delete_folder(curent_user_id, curent_folder_name)
         await query.answer("Папка " + str(curent_folder_name) + " удалена!")
         await query.answer()
         await f_folder_list(query.message, 'edit')
@@ -230,19 +226,19 @@ async def f_create_new_folder(message, type_start = 'send'):
 @dp.message_handler(state= Create_Folders.create_new_folder_step_2, content_types=types.ContentTypes.TEXT)
 async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     if len(message.text) <=  int(10): #если длина папки будет меньше 10 символов, тогда ..... 
-        for x in range(get_curent_user_proj_count()):
-                 if  list(get_curent_user_proj_in_low_case())[x] == message.text.lower():
-                     await query_global.answer('Данная папка уже существует! Введите другое имя', True)
+        for x in range(b_get_user_folders_count(curent_user_id)):
+                 if  list(b_get_user_folders_list_with_keys_in_low_case(curent_user_id))[x] == message.text.lower():
+                     #await query_global.answer('Данная папка уже существует! Введите другое имя', True)
+                     await message.reply('Данная папка уже существует! Введите другое имя')
                      return
         b_reg_new_folder(message.text)
-        await query_global.answer("Папка " + str(message.text) + " создана!")
+        #await query_global.answer("Папка " + str(message.text) + " создана!")
+        await message.reply("Папка " + str(message.text) + " создана!")
         await f_folder_list(message, 'start') 
         await state.finish()
     else:
-        await query_global.answer('Название папки превышает 10 символов', True)
-        await message.delete()
-        #await state.finish()
-        #await f_create_new_folder(message[-1])    #TODO
+        #await query_global.answer('Название папки превышает 10 символов', True)
+        await message.reply('Название папки превышает 10 символов')
         return
         
 async def f_set_lang(message : types.Message, type_start= 'start' ):
@@ -259,15 +255,12 @@ async def f_folder_list(message : types.Message, type_start):
     keyboard_markup = types.InlineKeyboardMarkup()
     create_new_folder_btn = types.InlineKeyboardButton('Создать новую папку 🗂', callback_data= 'create_new_folder')
     keyboard_markup.row(create_new_folder_btn)
-
-    for x in range(get_curent_user_proj_count()):
-        text_data_btn = str(list(get_curent_user_proj())[x])
-        y = types.InlineKeyboardButton(text_data_btn, callback_data= text_data_btn)
-        keyboard_markup.row(y)
+    for x in range(b_get_user_folders_count(curent_user_id)):
+        folder_name = str(list(b_get_user_folders_list_with_keys(curent_user_id))[x])
+        folder_btn = types.InlineKeyboardButton(folder_name, callback_data= folder_name)
+        keyboard_markup.row(folder_btn)
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
     keyboard_markup.row(back_btn)
-    
-
     if type_start == 'start':
         await message.answer("Please select your language:", reply_markup=keyboard_markup)
     elif type_start == 'edit':
@@ -336,10 +329,11 @@ async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
     name_file = second_data
     curent_file_extensions =  os.path.splitext(name_file)[1]
     random_chrt = password_generate.easy_pass(30)
-    get_curent_folders_id = get_curent_user_proj()[curent_folder_name] 
+    get_curent_folders_id = b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name] 
     if curent_file_extensions in ('.wav', '.mp3', '.wma'):
         await bot.send_message(msg.from_user.id,  'Идет загрузка файла....Подождите...')
         #urllib.request.urlretrieve(f'https://api.telegram.org/file/bot{API_TOKEN}/{fi}', 'audio_samples/' + random_chrt + curent_file_extensions)
+        #photo = await message.photo[0].download("temp/file.png")
         new_data = {}
         new_data[name] = random_chrt
         if b_get_curent_user_proj_data()[1] == '{}':
@@ -378,6 +372,8 @@ async def f_upload_audio_samples_step_4(msg: types.Message, state: FSMContext):
     
     await f_folder_list(msg, 'start') 
     await state.finish()
+    
+    
 ##Region ### START TODO section ###
 #def timer(msg):         #TODO
 #        count = 0
