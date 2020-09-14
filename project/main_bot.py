@@ -6,6 +6,7 @@ import config
 import time
 import logging
 import asyncio
+from aiogram.utils.exceptions import BotBlocked
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext # for using FSM
@@ -50,9 +51,9 @@ def cache_update_curent_folder_name(folder_name):
 def cache_update_curent_user_id(msg):
     global curent_user_id
     curent_user_id = msg.chat.id
-def cache_update_query_global(query_data):
+def cache_update_query_global():
     global query_global
-    query_global = query_data
+    query_global = types.CallbackQuery
 
     
 ##Region ### START backends section ###
@@ -65,11 +66,11 @@ def b_get_user_folders_list_with_keys_in_low_case(user_id):
 def b_get_user_folders_count(user_id):
     return  len(b_get_user_folders_list_with_keys(user_id))
 
-def b_get_curent_user_proj_data():
-    get_curent_folders_id = b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name] 
+def b_get_user_folder_data_by_key(user_id):
+    get_curent_folders_key = b_get_user_folders_list_with_keys(user_id)[curent_folder_name] 
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("SELECT * FROM projects Where project_id = '{0}'".format(get_curent_folders_id))
+    cur.execute("SELECT * FROM projects Where project_id = '{0}'".format(get_curent_folders_key))
     return cur.fetchall()[0]
     con.close()
 
@@ -158,7 +159,7 @@ async def f_welcome_message(message: types.Message, type_start):
 async def callback_handler(query: types.CallbackQuery, state):
     cache_update_curent_user_id(query.message)
     cache_update_curent_user_proj()
-    cache_update_query_global(query)
+    cache_update_query_global()
     answer_data = query.data
     if answer_data == 'welcome_msg':
         await query.answer()
@@ -181,10 +182,11 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
-        lang_btn = types.InlineKeyboardButton('Язык : ' + b_get_user_data(query.message.chat.id)[1], callback_data= 'edit_lang')
+        lang_btn = types.InlineKeyboardButton('Язык : ' + b_get_user_data(curent_user_id)[1], callback_data= 'edit_lang')
         keyboard_markup.row(back_btn,lang_btn)
         await query.message.edit_text("Настройки бота:", reply_markup=keyboard_markup)   
     if answer_data == 'edit_lang':
+        await query.answer()
         await f_set_lang(query.message, 'edit')
     if answer_data == 'folders_list':
         await state.finish()
@@ -192,10 +194,12 @@ async def callback_handler(query: types.CallbackQuery, state):
         await f_folder_list(query.message, 'edit')
     if answer_data == 'create_new_folder':
         if int(b_get_user_folders_count(curent_user_id)) < 7:
+            await query.answer()
             await f_create_new_folder(query.message)
         else:
-            await query.answer('Список папок превышает 7', True)
+            await query.answer('Список папок превышает 7 папок', True)
     if answer_data == 'folder_delete':
+        await query.answer()
         keyboard_markup = types.InlineKeyboardMarkup()
         delete_btn = types.InlineKeyboardButton('Да!', callback_data= 'process_to_delete_folder')
         keyboard_markup.row(delete_btn)
@@ -262,9 +266,9 @@ async def f_folder_list(message : types.Message, type_start):
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
     keyboard_markup.row(back_btn)
     if type_start == 'start':
-        await message.answer("Please select your language:", reply_markup=keyboard_markup)
+        await message.answer("Менеджер папок\n\nОбщее количество папок: {0}".format(b_get_user_folders_count(curent_user_id)), reply_markup=keyboard_markup)
     elif type_start == 'edit':
-        await message.edit_text("Please select your language:", reply_markup=keyboard_markup)
+        await message.edit_text("Менеджер папок\n\nОбщее количество папок: {0}".format(b_get_user_folders_count(curent_user_id)), reply_markup=keyboard_markup)
     
         
 async def manage_projects(message, folder_name):
@@ -279,8 +283,8 @@ async def manage_projects(message, folder_name):
     
     cache_update_curent_folder_name(folder_name)
     vat = ""
-    for  x in range(len(json.loads(b_get_curent_user_proj_data()[1]))):
-        vat+= str(list(json.loads(b_get_curent_user_proj_data()[1]))[x]) + "\n"
+    for  x in range(len(json.loads(b_get_user_folder_data_by_key (curent_user_id)[1]))):
+        vat+= str(list(json.loads(b_get_user_folder_data_by_key (curent_user_id)[1]))[x]) + "\n"
         print(vat)
     await message.edit_text("Вы работаете с папкой : " + str(folder_name) + "\n" + "\n" + 
                         "Список аудио сэмлов : \n" + vat
@@ -319,8 +323,8 @@ async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
     document_id = first_data
     file_info = await bot.get_file(document_id)
     fi = file_info.file_path
-    for x in range(len(json.loads(b_get_curent_user_proj_data()[1]))):
-        if str(list(json.loads(b_get_curent_user_proj_data()[1]))[x]) == msg.text:
+    for x in range(len(json.loads(b_get_user_folder_data_by_key (curent_user_id)[1]))):
+        if str(list(json.loads(b_get_user_folder_data_by_key (curent_user_id)[1]))[x]) == msg.text:
             await bot.send_message(msg.from_user.id, "Данная запись уже существует, введите другое имя : ")
             return
     name = msg.text
@@ -336,10 +340,10 @@ async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
         #photo = await message.photo[0].download("temp/file.png")
         new_data = {}
         new_data[name] = random_chrt
-        if b_get_curent_user_proj_data()[1] == '{}':
+        if b_get_user_folder_data_by_key (curent_user_id)[1] == '{}':
             data_to_add = json.dumps(new_data)
         else:
-            curent_data = json.loads(b_get_curent_user_proj_data()[1])
+            curent_data = json.loads(b_get_user_folder_data_by_key (curent_user_id)[1])
             res = {**curent_data, **new_data}
             data_to_add = json.dumps(res)
              
@@ -427,6 +431,16 @@ async def f_upload_audio_samples_step_4(msg: types.Message, state: FSMContext):
 #        return True
 #    return False
 ##EndRegion ### END TODO section ###
+
+@dp.errors_handler(exception=BotBlocked)
+async def error_bot_blocked(update: types.Update, exception: BotBlocked):
+    # Update: объект события от Telegram. Exception: объект исключения
+    # Здесь можно как-то обработать блокировку, например, удалить пользователя из БД
+    print(f"Меня заблокировал пользователь!\nСообщение: {update}\nОшибка: {exception}")
+
+    # Такой хэндлер должен всегда возвращать True,
+    # если дальнейшая обработка не требуется.
+    return True
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
