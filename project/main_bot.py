@@ -1,9 +1,16 @@
-### PyDejavuBot-
+""" PyDejavuBot
+Бот-помощник для решения музыкальных викторин. Бот написан на aiogram.
+
+/start - открыть глааное меню
+"""
+
+
+
 
 ##Region ### START imports section ###
-from threading import Thread  #for using thread
+#from threading import Thread  #for using thread
 import config
-import time
+#import time
 import logging
 import asyncio
 from aiogram.utils.exceptions import BotBlocked
@@ -15,7 +22,6 @@ import os.path # need for extract extions of file
 import json #нужен для работы с json-кодированными данными
 import password_generate # фнукции для генерации паролей
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-import urllib.request # for getting files from user
 ##EndRegion ### END imports section ###
 
 API_TOKEN = config.API_TOKEN # Initalialization API token for work with Telegram Bot
@@ -36,7 +42,7 @@ class Create_Folders(StatesGroup):
 class Upload_Simples(StatesGroup):
     upload_audio_samples_step_2 = State()
     upload_audio_samples_step_3 = State()
-    upload_audio_samples_step_4 = State()
+    #upload_audio_samples_step_4 = State()
 
 #initialize global vars for acces from anywhere
 def cache_update_curent_user_proj():
@@ -71,16 +77,18 @@ def b_get_user_folder_data_by_key(user_id):
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
     cur.execute("SELECT * FROM projects Where project_id = '{0}'".format(get_curent_folders_key))
-    return cur.fetchall()[0]
+    out = cur.fetchall()
     con.close()
+    return out[0]
 
 def b_get_user_data(user_id):
-        con = sqlite3.connect('myTable.db', check_same_thread=False)
-        cur = con.cursor()
-        cur.execute("SELECT * FROM users Where user_id= '{0}'".format(user_id))
-        con = sqlite3.connect('myTable.db', check_same_thread=False)
-        return cur.fetchone()
-        con.close()
+    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    cur = con.cursor()
+    cur.execute("SELECT * FROM users Where user_id= '{0}'".format(user_id))
+    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    out = cur.fetchone()
+    con.close()
+    return out
         
 def b_delete_folder(user_id, folder_name):
     get_projects = b_get_user_folders_list_with_keys(user_id)
@@ -102,18 +110,18 @@ def b_delete_folder(user_id, folder_name):
     cache_update_curent_user_proj()
     
 def b_set_lang(user_id, lang_name):
-        if b_get_user_data(user_id) is None: #если текущии юзер не будет найден в db, тoгда...
-            con = sqlite3.connect('myTable.db', check_same_thread=False)
-            cur = con.cursor()
-            cur.execute("INSERT INTO users VALUES ('{0}', '{1}', '{2}')".format(user_id, lang_name, '{}'))
-            con.commit()
-            con.close()
-        elif str(b_get_user_data(user_id)[0]) == str(user_id): #если текущии юзер найден в db, тогда....
-            con = sqlite3.connect('myTable.db', check_same_thread=False)
-            cur = con.cursor()
-            cur.execute("UPDATE users SET Lang = '{0}' WHERE User_id = '{1}'".format(lang_name, user_id))
-            con.commit()
-            con.close()
+    if b_get_user_data(user_id) is None: #если текущии юзер не будет найден в db, тoгда...
+        con = sqlite3.connect('myTable.db', check_same_thread=False)
+        cur = con.cursor()
+        cur.execute("INSERT INTO users VALUES ('{0}', '{1}', '{2}')".format(user_id, lang_name, '{}'))
+        con.commit()
+        con.close()
+    elif str(b_get_user_data(user_id)[0]) == str(user_id): #если текущии юзер найден в db, тогда....
+        con = sqlite3.connect('myTable.db', check_same_thread=False)
+        cur = con.cursor()
+        cur.execute("UPDATE users SET Lang = '{0}' WHERE User_id = '{1}'".format(lang_name, user_id))
+        con.commit()
+        con.close()
 
 def b_reg_new_folder(folder_name):
     generate_random_chrt = password_generate.easy_pass(30)
@@ -291,91 +299,49 @@ async def manage_projects(message, folder_name):
                         + "\n"+ "\nВаши действия - ", reply_markup=keyboard_markup)
     
 async def upload_audio_samples(message):
-        keyboard_markup = types.InlineKeyboardMarkup()
-        back_btn = types.InlineKeyboardButton('«      ', callback_data= curent_folder_name)
-        keyboard_markup.row(back_btn)
-        await message.edit_text("Вы работаете с папкой : " + str(curent_folder_name) + "\nЖду от тебя аудио сэмплы", reply_markup=keyboard_markup)
-        await Upload_Simples.upload_audio_samples_step_2.set()
+    keyboard_markup = types.InlineKeyboardMarkup()
+    back_btn = types.InlineKeyboardButton('«      ', callback_data= curent_folder_name)
+    keyboard_markup.row(back_btn)
+    await message.edit_text("Вы работаете с папкой : " + str(curent_folder_name) + "\nЖду от тебя аудио сэмплы", reply_markup=keyboard_markup)
+    await Upload_Simples.upload_audio_samples_step_2.set()
 
 
 @dp.message_handler(state= Upload_Simples.upload_audio_samples_step_2, content_types=types.ContentTypes.AUDIO | types.ContentTypes.DOCUMENT)
 async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContext):
-        keyboard_markup = types.InlineKeyboardMarkup()
-        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
-        keyboard_markup.row(back_btn)
-        await bot.send_message(message.from_user.id, "Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
-
-        global first_data
-        first_data = message.document.file_id
-        global second_data
-        second_data = message.document.file_name
-        
-        #await state.update_data(recive_data= message.document.file_id, recive_data_1 = message.document.file_name)
-        await Upload_Simples.upload_audio_samples_step_3.set()
-    
-    
-    
-@dp.message_handler(state= Upload_Simples.upload_audio_samples_step_3, content_types=types.ContentTypes.TEXT)
-async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
-    #document_id = msg.document.file_id
-    #print(await state.get_data())
-    #document_id = await state.get_data()['recive_data']
-    document_id = first_data
-    file_info = await bot.get_file(document_id)
-    fi = file_info.file_path
-    for x in range(len(json.loads(b_get_user_folder_data_by_key (curent_user_id)[1]))):
-        if str(list(json.loads(b_get_user_folder_data_by_key (curent_user_id)[1]))[x]) == msg.text:
-            await bot.send_message(msg.from_user.id, "Данная запись уже существует, введите другое имя : ")
-            return
-    name = msg.text
-    #name_file = msg.document.file_name
-    #name_file = await state.get_data()['recive_data_1']
-    name_file = second_data
-    curent_file_extensions =  os.path.splitext(name_file)[1]
-    random_chrt = password_generate.easy_pass(30)
-    get_curent_folders_id = b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name] 
-    if curent_file_extensions in ('.wav', '.mp3', '.wma'):
-        await bot.send_message(msg.from_user.id,  'Идет загрузка файла....Подождите...')
-        #urllib.request.urlretrieve(f'https://api.telegram.org/file/bot{API_TOKEN}/{fi}', 'audio_samples/' + random_chrt + curent_file_extensions)
-        #photo = await message.photo[0].download("temp/file.png")
-        new_data = {}
-        new_data[name] = random_chrt
-        if b_get_user_folder_data_by_key (curent_user_id)[1] == '{}':
-            data_to_add = json.dumps(new_data)
-        else:
-            curent_data = json.loads(b_get_user_folder_data_by_key (curent_user_id)[1])
-            res = {**curent_data, **new_data}
-            data_to_add = json.dumps(res)
-             
-        con = sqlite3.connect('myTable.db', check_same_thread=False)
-        cur = con.cursor()
-        cur.execute("UPDATE projects SET data = '{0}' WHERE project_id = '{1}'".format(data_to_add, get_curent_folders_id))
-        con.commit()
-        con.close()
-
-        await bot.send_message(msg.from_user.id, 'Файл успешно сохранён')
-        
-    else:
-        await bot.send_message(msg.from_user.id, 'Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
-        return
+    await state.update_data(audio_sample_message=message)
     
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
     keyboard_markup.row(back_btn)
     await bot.send_message(message.from_user.id, "Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
+    
+    await Upload_Simples.upload_audio_samples_step_3.set()
+    
+    
+    
+@dp.message_handler(state= Upload_Simples.upload_audio_samples_step_3, content_types=types.ContentTypes.TEXT)
+async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
+    await state.update_data(audio_sample_name=msg.text)
+    user_data = await state.get_data()
+    document_id = user_data["audio_sample_message"].document.file_id
+#    for x in range(len(json.loads(b_get_user_folder_data_by_key (curent_user_id)[1]))):
+#        if str(list(json.loads(b_get_user_folder_data_by_key (curent_user_id)[1]))[x]) == msg.text:
+#            await bot.send_message(msg.from_user.id, "Данная запись уже существует, введите другое имя : ")
+#            return
+    name_file = user_data["audio_sample_message"].document.file_name
+    curent_file_extensions =  os.path.splitext(name_file)[1]
+    random_chrt = password_generate.easy_pass(30)
+    #get_curent_folders_id = b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name] 
+    if curent_file_extensions in ('.wav', '.mp3', '.wma'):
+        await bot.send_message(msg.from_user.id,  'Идет загрузка файла....\nПодождите...')
+        await bot.download_file_by_id(file_id=document_id, destination='audio_samples/' + random_chrt + curent_file_extensions)
+        await msg.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
+        await f_folder_list(msg, 'start') 
+        await state.finish()
+    else:
+        await msg.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
+        return
 
-    await Upload_Simples.upload_audio_samples_step_4.set()
-        
-        
-@dp.message_handler(state= Upload_Simples.upload_audio_samples_step_4, content_types=types.ContentTypes.TEXT)
-async def f_upload_audio_samples_step_4(msg: types.Message, state: FSMContext):
-    
-    
-    
-    
-    
-    await f_folder_list(msg, 'start') 
-    await state.finish()
     
     
 ##Region ### START TODO section ###
