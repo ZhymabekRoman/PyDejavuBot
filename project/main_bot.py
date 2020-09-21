@@ -334,69 +334,13 @@ async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
     #get_curent_folders_id = b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name] 
     if curent_file_extensions in ('.wav', '.mp3', '.wma'):
         await bot.send_message(msg.from_user.id,  'Идет загрузка файла....\nПодождите...')
-        await bot.download_file_by_id(file_id=document_id, destination='audio_samples/' + random_chrt + curent_file_extensions)
+        await bot.download_file_by_id(file_id=document_id, destination= 'audio_samples/' + str(curent_user_id) + '/' + random_chrt + curent_file_extensions)
         await msg.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
         await f_folder_list(msg, 'start') 
         await state.finish()
     else:
         await msg.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
         return
-
-    
-    
-##Region ### START TODO section ###
-#def timer(msg):         #TODO
-#        count = 0
-#        while True:
-#            time.sleep(1)
-#            count += 1
-            #print("Hi " + name + " This program has now been running for " + str(count) + " seconds.")
-
-   # background_thread = Thread(target=timer)
-  
-   # await background_thread.start()
-   
-# run discord_async_method() in the "background"
-#asyncio.get_event_loop().create_task(timer(query.message))
-  
-#@dp.message_handler(content_types=types.ContentTypes.DOCUMENT)
-#async def scan_message(msg: types.Message):
-#    print("get document from user")
-#    document_id = msg.document.file_id
-#    file_info = await bot.get_file(document_id)
-#    fi = file_info.file_path
-#    name = msg.document.file_name
-#    curent_file_extensions =  os.path.splitext(name)[1]
-#    if curent_file_extensions in ('.wav', '.mp3', '.wma'):
-#        print('Will be Ok!')
-#        urllib.request.urlretrieve(f'https://api.telegram.org/file/bot{API_TOKEN}/{fi}', 'audio_samples/' + password_generate.easy_pass(30) + curent_file_extensions)
-#        await bot.send_message(msg.from_user.id, 'Файл успешно сохранён')
-#    else:
-#        print('noooooo')
-#        await bot.send_message(msg.from_user.id, 'Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
-#        #return     #TODO
-#        
-        
-#####TODO 
-#   try:
-#        await bot.send_message(user_id, text, disable_notification=disable_notification)
-#    except exceptions.BotBlocked:
-#        log.error(f"Target [ID:{user_id}]: blocked by user")
-#    except exceptions.ChatNotFound:
-#        log.error(f"Target [ID:{user_id}]: invalid user ID")
-#    except exceptions.RetryAfter as e:
-#        log.error(f"Target [ID:{user_id}]: Flood limit is exceeded. Sleep {e.timeout} seconds.")
-#        await asyncio.sleep(e.timeout)
-#        return await send_message(user_id, text)  # Recursive call
-#    except exceptions.UserDeactivated:
-#        log.error(f"Target [ID:{user_id}]: user is deactivated")
-#    except exceptions.TelegramAPIError:
-#        log.exception(f"Target [ID:{user_id}]: failed")
-#    else:
-#        log.info(f"Target [ID:{user_id}]: success")
-#        return True
-#    return False
-##EndRegion ### END TODO section ###
 
 @dp.errors_handler(exception=BotBlocked)
 async def error_bot_blocked(update: types.Update, exception: BotBlocked):
