@@ -40,6 +40,8 @@ class Create_Folders(StatesGroup):
 class Upload_Simples(StatesGroup):
     upload_audio_samples_step_2 = State()
     upload_audio_samples_step_3 = State()
+class Remove_Simples(StatesGroup):
+    remove_audio_samples_step_2 = State()
 
 #initialize global vars for acces from anywhere
 def cache_update_curent_user_folders():
@@ -94,6 +96,8 @@ def b_get_user_data(user_id):
     return out
         
 def b_delete_folder(user_id, folder_name):
+    b_delete_all_audio_sample_from_folder(curent_folder_name)
+    
     get_projects = b_get_user_folders_list_with_keys(user_id)
     for proj_name, proj_id in get_projects.items():
         if  proj_name == folder_name:
@@ -154,17 +158,32 @@ def b_reg_new_audio_sample(folder_name, sample_name, file_id):
     con.commit()
     con.close()
     
-def b_delete_audio_sample(folder_name, sample_name, file_id):
+def b_delete_all_audio_sample_from_folder(folder_name):
     abc = b_get_user_folders_list_with_keys(curent_user_id)# {'Djxhhx' : {'lllpl' : 'fuuff'}, 'Jdjdjd' : {}}
-    ran = abc[folder_name].pop(sample_name)
-    data_to_add = json.dumps(abc[folder_name] = ran)
+    new_data = {}
+    abc[folder_name] = new_data
+    print(abc)
+    data_to_add = json.dumps(abc)
     print(data_to_add)
-#    con = sqlite3.connect('myTable.db', check_same_thread=False)
-#    cur = con.cursor()
-#    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
-#    con.commit()
-#    con.close()
-  #  pass
+    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    cur = con.cursor()
+    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
+    con.commit()
+    con.close()
+    
+def b_delete_audio_sample(folder_name, sample_name):
+    abc = b_get_user_folders_list_with_keys(curent_user_id)# {'Djxhhx' : {'lllpl' : 'fuuff'}, 'Jdjdjd' : {}}
+    new_data = abc[folder_name]
+    del new_data[sample_name]
+    abc[folder_name] = new_data
+    print(abc)
+    data_to_add = json.dumps(abc)
+    #print(data_to_add)
+    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    cur = con.cursor()
+    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
+    con.commit()
+    con.close()
 ##EndRegion ### END backends section ###
 
 @dp.message_handler(commands=['start'], state='*')
@@ -242,6 +261,9 @@ async def callback_handler(query: types.CallbackQuery, state):
     if answer_data == 'upload_audio_samples':
         await query.answer()
         await upload_audio_samples(query.message)
+    if answer_data == 'remove_audio_samples':
+        await query.answer()
+        await remove_audio_samples(query.message)
     if answer_data == 'process_to_delete_folder':
         b_delete_folder(curent_user_id, curent_folder_name)
         await query.answer("Папка " + str(curent_folder_name) + " удалена!")
@@ -324,6 +346,23 @@ async def manage_folder(message, folder_name):
     await message.edit_text("Вы работаете с папкой : " + str(folder_name) + "\n" + "\n" + 
                         "Список аудио сэмлов : \n" + get_samples_name
                         + "\n"+ "Ваши действия - ", reply_markup=keyboard_markup)
+
+async def remove_audio_samples(message):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for  x in range(len(b_get_user_folders_list_with_keys (curent_user_id)[curent_folder_name])):
+        keyboard.add(str(list(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name])[x]))
+    await message.answer("Выберите блюдо которую хотите удалить:", reply_markup=keyboard)
+    await Remove_Simples.remove_audio_samples_step_2.set()
+    
+    
+@dp.message_handler(state= Remove_Simples.remove_audio_samples_step_2, content_types=types.ContentTypes.TEXT)
+async def f_remove_audio_samples_step_2(msg: types.Message, state: FSMContext):
+    await state.update_data(chosen_food=msg.text)
+    user_data = await state.get_data()
+    b_delete_audio_sample(curent_folder_name, user_data['chosen_food'])
+    await msg.answer(f"Сэмпл {user_data['chosen_food']} успешно удален.", reply_markup=types.ReplyKeyboardRemove())
+    await state.finish()
+    await f_folder_list(msg, 'start') 
     
 async def upload_audio_samples(message):
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -362,9 +401,9 @@ async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
         await bot.send_message(msg.from_user.id,  'Идет загрузка файла....\nПодождите...')
         #await bot.download_file_by_id(file_id=document_id, destination= 'audio_samples/' + str(curent_user_id) + '/' + random_chrt + curent_file_extensions)
         await msg.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
-        b_reg_new_audio_sample( curent_folder_name, user_data["audio_sample_name"], document_id)
-        await f_folder_list(msg, 'start') 
+        b_reg_new_audio_sample(curent_folder_name, user_data["audio_sample_name"], document_id)
         await state.finish()
+        await f_folder_list(msg, 'start') 
     else:
         await msg.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
         return
