@@ -8,7 +8,6 @@
 ##Region ### START imports section ###
 #from threading import Thread  #for using thread
 import config
-from collections import defaultdict
 #import time
 import logging
 import asyncio
@@ -19,7 +18,7 @@ from aiogram.dispatcher import FSMContext # for using FSM
 import sqlite3 # for working with DB
 import os.path # need for extract extions of file
 import json #нужен для работы с json-кодированными данными
-import password_generate # фнукции для генерации паролей
+#import password_generate # фнукции для генерации паролей
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 ##EndRegion ### END imports section ###
 
@@ -146,12 +145,9 @@ def b_reg_new_audio_sample(folder_name, sample_name, file_id):
     abc = b_get_user_folders_list_with_keys(curent_user_id) # {'Djxhhx' : {'lllpl' : 'fuuff'}, 'Jdjdjd' : {}}
     new_data = {}
     new_data[sample_name] = file_id # присваевает новые значения из аргументов
-    
     data_to_merge = merge_two_dicts(abc[folder_name], new_data)
     abc[folder_name] = data_to_merge
-    
     data_to_add = json.dumps(abc)
-    print(data_to_add)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
     cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
@@ -162,9 +158,7 @@ def b_delete_all_audio_sample_from_folder(folder_name):
     abc = b_get_user_folders_list_with_keys(curent_user_id)# {'Djxhhx' : {'lllpl' : 'fuuff'}, 'Jdjdjd' : {}}
     new_data = {}
     abc[folder_name] = new_data
-    print(abc)
     data_to_add = json.dumps(abc)
-    print(data_to_add)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
     cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
@@ -176,9 +170,7 @@ def b_delete_audio_sample(folder_name, sample_name):
     new_data = abc[folder_name]
     del new_data[sample_name]
     abc[folder_name] = new_data
-    print(abc)
     data_to_add = json.dumps(abc)
-    #print(data_to_add)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
     cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
@@ -229,7 +221,7 @@ async def callback_handler(query: types.CallbackQuery, state):
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
         keyboard_markup.row(back_btn)
-        await query.message.edit_text("Разработчик ботка : @ZhymabekRoman\nТех.поддержка : @ZhymabekRoman", reply_markup=keyboard_markup)
+        await query.message.edit_text("Разработчик ботка : @Zhymabek_Roman\nТех.поддержка : @Zhymabek_Roman", reply_markup=keyboard_markup)
     if answer_data == 'bot_settings':
         await query.answer()
         keyboard_markup = types.InlineKeyboardMarkup()
@@ -340,18 +332,20 @@ async def manage_folder(message, folder_name):
     keyboard_markup.row(back_btn)
     
     get_samples_name = ""
-    for  x in range(len(b_get_user_folders_list_with_keys (curent_user_id)[curent_folder_name])):
-        get_samples_name+= str(list(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name])[x]) + "\n"
-        print(get_samples_name)
+    for i, b in enumerate(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name], 1):
+        print(f"{i} : {b}")
+        get_samples_name += str(f"{i}) {b}\n")
+    
     await message.edit_text("Вы работаете с папкой : " + str(folder_name) + "\n" + "\n" + 
                         "Список аудио сэмлов : \n" + get_samples_name
                         + "\n"+ "Ваши действия - ", reply_markup=keyboard_markup)
 
 async def remove_audio_samples(message):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    for  x in range(len(b_get_user_folders_list_with_keys (curent_user_id)[curent_folder_name])):
-        keyboard.add(str(list(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name])[x]))
-    await message.answer("Выберите блюдо которую хотите удалить:", reply_markup=keyboard)
+    for i, b in enumerate(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name], 1):
+        keyboard.add(str(b))
+    
+    await message.answer("Выберите аудио сэмпл который хотите удалить:", reply_markup=keyboard)
     await Remove_Simples.remove_audio_samples_step_2.set()
     
     
@@ -375,13 +369,22 @@ async def upload_audio_samples(message):
 @dp.message_handler(state= Upload_Simples.upload_audio_samples_step_2, content_types=types.ContentTypes.AUDIO | types.ContentTypes.DOCUMENT)
 async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContext):
     await state.update_data(audio_sample_message=message)
+    user_data = await state.get_data()
     
-    keyboard_markup = types.InlineKeyboardMarkup()
-    back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
-    keyboard_markup.row(back_btn)
-    await bot.send_message(message.from_user.id, "Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
+    name_file = user_data["audio_sample_message"].document.file_name
+    curent_file_extensions =  os.path.splitext(name_file)[1]
     
-    await Upload_Simples.upload_audio_samples_step_3.set()
+    if curent_file_extensions in ('.wav', '.mp3', '.wma'):
+        keyboard_markup = types.InlineKeyboardMarkup()
+        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
+        keyboard_markup.row(back_btn)
+        await bot.send_message(message.from_user.id, "Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
+    
+        await Upload_Simples.upload_audio_samples_step_3.set()
+    else:
+        await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
+        return
+    
     
     
     
@@ -394,19 +397,13 @@ async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
         if str(user_data["audio_sample_name"]).lower() == str(list(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name])[x]).lower():
             await msg.reply("Данная запись уже существует, введите другое имя : ")
             return
-    name_file = user_data["audio_sample_message"].document.file_name
-    curent_file_extensions =  os.path.splitext(name_file)[1]
-    #random_chrt = password_generate.easy_pass(30)
-    if curent_file_extensions in ('.wav', '.mp3', '.wma'):
-        await bot.send_message(msg.from_user.id,  'Идет загрузка файла....\nПодождите...')
-        #await bot.download_file_by_id(file_id=document_id, destination= 'audio_samples/' + str(curent_user_id) + '/' + random_chrt + curent_file_extensions)
-        await msg.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
-        b_reg_new_audio_sample(curent_folder_name, user_data["audio_sample_name"], document_id)
-        await state.finish()
-        await f_folder_list(msg, 'start') 
-    else:
-        await msg.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
-        return
+            
+    await bot.send_message(msg.from_user.id,  'Идет загрузка файла....\nПодождите...')
+    #await bot.download_file_by_id(file_id=document_id, destination= 'audio_samples/' + str(curent_user_id) + '/' + random_chrt + curent_file_extensions)
+    await msg.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
+    b_reg_new_audio_sample(curent_folder_name, user_data["audio_sample_name"], document_id)
+    await state.finish()
+    await f_folder_list(msg, 'start') 
 
 @dp.errors_handler(exception=BotBlocked)
 async def error_bot_blocked(update: types.Update, exception: BotBlocked):
