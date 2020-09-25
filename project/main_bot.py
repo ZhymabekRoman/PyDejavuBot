@@ -75,7 +75,7 @@ def b_get_user_folders_count(user_id):
 def b_get_user_data(user_id):
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("SELECT * FROM users Where user_id= '{0}'".format(user_id))
+    cur.execute("SELECT * FROM users Where user_id= :0", {'0': user_id})
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     out = cur.fetchone()
     con.close()
@@ -86,19 +86,11 @@ def b_delete_folder(user_id, folder_name):
     b_delete_all_audio_sample_from_folder(curent_folder_name)
     
     get_projects = b_get_user_folders_list_with_keys(user_id)
-    for proj_name, proj_id in get_projects.items():
-        if  proj_name == folder_name:
-            print(proj_id)
-            con = sqlite3.connect('myTable.db', check_same_thread=False)
-            cur = con.cursor()
-            cur.execute("DELETE FROM projects WHERE project_id = '{0}'".format(proj_id))
-            con.commit()
-            con.close()
     del get_projects[folder_name]
     data_to_add = json.dumps(get_projects)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, user_id))
+    cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': user_id})
     con.commit()
     con.close()
     cache_update_curent_user_folders()
@@ -107,13 +99,13 @@ def b_set_lang(user_id, lang_name):
     if b_get_user_data(user_id) is None: #если текущии юзер не будет найден в db, тoгда...
         con = sqlite3.connect('myTable.db', check_same_thread=False)
         cur = con.cursor()
-        cur.execute("INSERT INTO users VALUES ('{0}', '{1}', '{2}')".format(user_id, lang_name, '{}'))
+        cur.execute("INSERT INTO users VALUES (:0, :1, :2)", {'0': user_id, '1': lang_name, '2': '{}'})
         con.commit()
         con.close()
     elif str(b_get_user_data(user_id)[0]) == str(user_id): #если текущии юзер найден в db, тогда....
         con = sqlite3.connect('myTable.db', check_same_thread=False)
         cur = con.cursor()
-        cur.execute("UPDATE users SET Lang = '{0}' WHERE User_id = '{1}'".format(lang_name, user_id))
+        cur.execute("UPDATE users SET Lang = :0 WHERE User_id = :1", {'0': lang_name, '1': user_id})
         con.commit()
         con.close()
 
@@ -124,7 +116,7 @@ def b_reg_new_folder(folder_name):
     data_to_add = json.dumps(merge_two_dicts(get_projects, new_data))
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
+    cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': curent_user_id})
     con.commit()
     con.close()
     cache_update_curent_user_folders()
@@ -138,7 +130,7 @@ def b_reg_new_audio_sample(folder_name, sample_name, file_id):
     data_to_add = json.dumps(abc)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
+    cur.execute("UPDATE users SET projects =  :0  WHERE User_id = :1", {'0': data_to_add, '1': curent_user_id})
     con.commit()
     con.close()
     
@@ -149,7 +141,7 @@ def b_delete_all_audio_sample_from_folder(folder_name):
     data_to_add = json.dumps(abc)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
+    cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': curent_user_id})
     con.commit()
     con.close()
     
@@ -161,7 +153,7 @@ def b_delete_audio_sample(folder_name, sample_name):
     data_to_add = json.dumps(abc)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("UPDATE users SET projects =  '{0}' WHERE User_id = '{1}'".format(data_to_add, curent_user_id))
+    cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': curent_user_id})
     con.commit()
     con.close()
 ##EndRegion ### END backends section ###
