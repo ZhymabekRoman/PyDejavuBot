@@ -69,9 +69,6 @@ def merge_two_dicts(x, y):
 def b_get_user_folders_list_with_keys(user_id):
     return json.loads(b_get_user_data(user_id)[2]) #расшифровывем json кодированные данные
 
-def b_get_user_folders_list_with_keys_in_low_case(user_id):
-    return dict((k.lower(), v) for k, v in  json.loads(b_get_user_data(user_id)[2]).items())
-
 def b_get_user_folders_count(user_id):
     return  len(b_get_user_folders_list_with_keys(user_id))
 
@@ -245,11 +242,14 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         await upload_audio_samples(query.message)
     if answer_data == 'remove_audio_samples':
+        if len(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name]) == 0:
+            await query.answer('У вас нету аудио сэмлов', True)
+            return
         await query.answer()
         await remove_audio_samples(query.message)
     if answer_data == 'process_to_delete_folder':
         b_delete_folder(curent_user_id, curent_folder_name)
-        await query.answer("Папка " + str(curent_folder_name) + " удалена!")
+        await query.answer(f"Папка {curent_folder_name} удалена!")
         await query.answer()
         await f_folder_list(query.message, 'edit')
     for w in b_get_user_folders_list_with_keys(curent_user_id):
@@ -267,9 +267,9 @@ async def f_create_new_folder(message, type_start = 'send'):
 
 @dp.message_handler(state= Create_Folders.create_new_folder_step_2, content_types=types.ContentTypes.TEXT)
 async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
-    if len(message.text) <=  int(10): #если длина папки будет меньше 10 символов, тогда ..... 
-        for x in range(b_get_user_folders_count(curent_user_id)):
-            if  list(b_get_user_folders_list_with_keys_in_low_case(curent_user_id))[x] == message.text.lower():
+    if len(message.text) <=  10: #если длина папки будет меньше 10 символов, тогда ..... 
+        for x in b_get_user_folders_list_with_keys(curent_user_id):
+            if x.lower() == message.text.lower():
                 #await query_global.answer('Данная папка уже существует! Введите другое имя', True)
                 await message.reply('Данная папка уже существует! Введите другое имя')
                 return
@@ -333,13 +333,14 @@ async def manage_folder(message, folder_name):
                         + "\n"+ "Ваши действия - ", reply_markup=keyboard_markup)
 
 async def remove_audio_samples(message):
-    if len(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name]) == 0:
-        await message.answer("У вас нету аудио сэмлов")
-        return
-        
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    for i, b in enumerate(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name], 1):
-        keyboard.add(str(b))
+    for i in b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name]:
+        keyboard.add(str(i))
+        
+    # TODO : Make back Inline button
+    keyboard_markup = types.InlineKeyboardMarkup()
+    back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
+    keyboard_markup.row(back_btn)
     
     await message.answer("Выберите аудио сэмпл который хотите удалить:", reply_markup=keyboard)
     await Remove_Simples.remove_audio_samples_step_2.set()
@@ -350,7 +351,7 @@ async def f_remove_audio_samples_step_2(msg: types.Message, state: FSMContext):
     await state.update_data(chosen_food=msg.text)
     user_data = await state.get_data()
     b_delete_audio_sample(curent_folder_name, user_data['chosen_food'])
-    await msg.answer(f"Сэмпл {user_data['chosen_food']} успешно удален.", reply_markup=types.ReplyKeyboardRemove())
+    await msg.reply(f"Сэмпл {user_data['chosen_food']} успешно удален.", reply_markup=types.ReplyKeyboardRemove())
     await state.finish()
     await f_folder_list(msg, 'start') 
     
@@ -358,7 +359,7 @@ async def upload_audio_samples(message):
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= curent_folder_name)
     keyboard_markup.row(back_btn)
-    await message.edit_text("Вы работаете с папкой : " + str(curent_folder_name) + "\nЖду от тебя аудио сэмплы", reply_markup=keyboard_markup)
+    await message.edit_text(f"Вы работаете с папкой : {curent_folder_name}\nЖду от тебя аудио сэмплы", reply_markup=keyboard_markup)
     await Upload_Simples.upload_audio_samples_step_2.set()
 
 
@@ -375,7 +376,6 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
         keyboard_markup.row(back_btn)
         await bot.send_message(message.from_user.id, "Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
-    
         await Upload_Simples.upload_audio_samples_step_3.set()
     else:
         await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
