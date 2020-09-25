@@ -75,15 +75,6 @@ def b_get_user_folders_list_with_keys_in_low_case(user_id):
 def b_get_user_folders_count(user_id):
     return  len(b_get_user_folders_list_with_keys(user_id))
 
-#def b_get_user_folder_data_by_key(user_id):
-#    get_curent_folders_key = b_get_user_folders_list_with_keys(user_id)[curent_folder_name] 
-#    con = sqlite3.connect('myTable.db', check_same_thread=False)
-#    cur = con.cursor()
-#    cur.execute("SELECT * FROM projects Where project_id = '{0}'".format(get_curent_folders_key))
-#    out = cur.fetchall()
-#    con.close()
-#    return out[0]
-
 def b_get_user_data(user_id):
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
@@ -184,7 +175,7 @@ async def send_welcome(message: types.Message):
     cache_update_curent_user_folders()
     if b_get_user_data(curent_user_id) is None: #если текущии юзер не найден в db, тогда....
         await f_set_lang(message, 'start')
-    elif str((b_get_user_data(curent_user_id))[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
+    elif str(b_get_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
         await f_welcome_message(message, 'reply')
 
 async def f_welcome_message(message: types.Message, type_start):
@@ -249,7 +240,7 @@ async def callback_handler(query: types.CallbackQuery, state):
         keyboard_markup.row(delete_btn)
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
         keyboard_markup.row(back_btn)
-        await query.message.edit_text("Вы действительно хотите удалить папку?\nЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ!", reply_markup=keyboard_markup)
+        await query.message.edit_text(f"Вы действительно хотите удалить папку {curent_folder_name}?\nЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ!", reply_markup=keyboard_markup)
     if answer_data == 'upload_audio_samples':
         await query.answer()
         await upload_audio_samples(query.message)
@@ -261,11 +252,11 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer("Папка " + str(curent_folder_name) + " удалена!")
         await query.answer()
         await f_folder_list(query.message, 'edit')
-    for w in range(len(curent_user_folders)):
-        if answer_data == list(curent_user_folders)[w]:
+    for w in b_get_user_folders_list_with_keys(curent_user_id):
+        if answer_data == w:
             await state.finish()
             await query.answer()
-            await manage_folder(query.message, str(list(curent_user_folders)[w]))
+            await manage_folder(query.message, str(w))
   
 async def f_create_new_folder(message, type_start = 'send'):
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -306,10 +297,11 @@ async def f_folder_list(message : types.Message, type_start):
     keyboard_markup = types.InlineKeyboardMarkup()
     create_new_folder_btn = types.InlineKeyboardButton('Создать новую папку 🗂', callback_data= 'create_new_folder')
     keyboard_markup.row(create_new_folder_btn)
-    for x in range(b_get_user_folders_count(curent_user_id)):
-        folder_name = str(list(b_get_user_folders_list_with_keys(curent_user_id))[x])
+    
+    for folder_name in b_get_user_folders_list_with_keys(curent_user_id):
         folder_btn = types.InlineKeyboardButton(folder_name, callback_data= folder_name)
         keyboard_markup.row(folder_btn)
+ 
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
     keyboard_markup.row(back_btn)
     if type_start == 'start':
@@ -341,6 +333,10 @@ async def manage_folder(message, folder_name):
                         + "\n"+ "Ваши действия - ", reply_markup=keyboard_markup)
 
 async def remove_audio_samples(message):
+    if len(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name]) == 0:
+        await message.answer("У вас нету аудио сэмлов")
+        return
+        
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     for i, b in enumerate(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name], 1):
         keyboard.add(str(b))
