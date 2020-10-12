@@ -7,7 +7,7 @@ authors = ["repl.it user <replituser@example.com>"]
 [tool.poetry.dependencies]
 python = "^3.8"
 aiogram = "^2.0"
-telebot = "^0.0.3"
+config = "^0.5.0"
 
 [tool.poetry.dev-dependencies]
 
