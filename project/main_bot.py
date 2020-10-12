@@ -44,11 +44,8 @@ class Remove_Simples(StatesGroup):
 
 #initialize global vars for acces from anywhere
 def cache_update_curent_user_folders():
-    try:
-        global curent_user_folders
-        curent_user_folders = b_get_user_folders_list_with_keys(curent_user_id)
-    except:
-    	curent_user_folders = "None"
+    global curent_user_folders
+    curent_user_folders = b_get_user_folders_list_with_keys(curent_user_id)
 def cache_update_curent_folder_name(folder_name):
     global curent_folder_name
     curent_folder_name = folder_name
@@ -94,15 +91,16 @@ def b_delete_folder(user_id, folder_name):
     con.commit()
     con.close()
     cache_update_curent_user_folders()
-    
-def b_set_lang(user_id, lang_name):
-    if b_get_user_data(user_id) is None: #если текущии юзер не будет найден в db, тoгда...
+
+def b_create_empety_db_data(user_id):
+    if b_get_user_data(user_id) is None:
         con = sqlite3.connect('myTable.db', check_same_thread=False)
         cur = con.cursor()
-        cur.execute("INSERT INTO users VALUES (:0, :1, :2)", {'0': user_id, '1': lang_name, '2': '{}'})
+        cur.execute("INSERT INTO users VALUES (:0, :1, :2)", {'0': user_id, '1': '', '2': '{}'})
         con.commit()
         con.close()
-    elif str(b_get_user_data(user_id)[0]) == str(user_id): #если текущии юзер найден в db, тогда....
+
+def b_set_lang(user_id, lang_name):
         con = sqlite3.connect('myTable.db', check_same_thread=False)
         cur = con.cursor()
         cur.execute("UPDATE users SET Lang = :0 WHERE User_id = :1", {'0': lang_name, '1': user_id})
@@ -160,11 +158,12 @@ def b_delete_audio_sample(folder_name, sample_name):
 
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
+    b_create_empety_db_data(message.chat.id)
     cache_update_curent_user_id(message)
     cache_update_curent_user_folders()
-    if b_get_user_data(curent_user_id) is None: #если текущии юзер не найден в db, тогда....
+    if b_get_user_data(curent_user_id)[1] == '':
         await f_set_lang(message, 'start')
-    elif str(b_get_user_data(curent_user_id)[0]) == str(curent_user_id): #если текущии юзер найден в db, тогда....
+    else:
         await f_welcome_message(message, 'reply')
 
 async def f_welcome_message(message: types.Message, type_start):
@@ -193,9 +192,15 @@ async def callback_handler(query: types.CallbackQuery, state):
         b_set_lang(curent_user_id,'Ru')
         await f_welcome_message(query.message, 'edit')
     if answer_data == 'set_lang-en':
-        await query.answer('🎛️ Setings : Selected English 🇺🇸 language!')
-        b_set_lang(query.message.chat.id,'En')
-        await f_welcome_message(query.message, 'edit')
+        await query.answer('Бот в процесе разработки. В данное время поддерживается только русскии язык')
+#        await query.answer('🎛️ Setings : Selected English 🇺🇸 language!')
+#        b_set_lang(query.message.chat.id,'En')
+#        await f_welcome_message(query.message, 'edit')
+    if answer_data == 'set_lang-kz':
+        await query.answer('Бот в процесе разработки. В данное время поддерживается только русскии язык')
+#        await query.answer('🎛️ Setings : Selected Kazakh 🇰🇿 language!')
+#        b_set_lang(query.message.chat.id,'Kz')
+#        await f_welcome_message(query.message, 'edit')
     if answer_data == 'about_bot':
         await query.answer()
         keyboard_markup = types.InlineKeyboardMarkup()
@@ -206,7 +211,7 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
-        lang_btn = types.InlineKeyboardButton('Язык : ' + b_get_user_data(curent_user_id)[1], callback_data= 'edit_lang')
+        lang_btn = types.InlineKeyboardButton(f'Язык : {b_get_user_data(curent_user_id)[1]}', callback_data= 'edit_lang')
         keyboard_markup.row(back_btn,lang_btn)
         await query.message.edit_text("Настройки бота:", reply_markup=keyboard_markup)   
     if answer_data == 'edit_lang':
@@ -279,7 +284,8 @@ async def f_set_lang(message : types.Message, type_start= 'start' ):
     keyboard_markup = types.InlineKeyboardMarkup()
     set_en_lang_btns = types.InlineKeyboardButton('English 🇺🇸', callback_data= 'set_lang-en')
     set_ru_lang_btns = types.InlineKeyboardButton('Russian 🇷🇺', callback_data= 'set_lang-ru')
-    keyboard_markup.row(set_ru_lang_btns, set_en_lang_btns)
+    set_kz_lang_btns = types.InlineKeyboardButton('Kazakh 🇰🇿', callback_data= 'set_lang-kz')
+    keyboard_markup.row(set_ru_lang_btns, set_en_lang_btns, set_kz_lang_btns)
     if type_start == 'start':
         await message.reply("Please select your language:", reply_markup=keyboard_markup)
     elif type_start == 'edit':
@@ -317,7 +323,6 @@ async def manage_folder(message, folder_name):
     
     get_samples_name = ""
     for i, b in enumerate(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name], 1):
-        print(f"{i} : {b}")
         get_samples_name += str(f"{i}) {b}\n")
     
     await message.edit_text("Вы работаете с папкой : " + str(folder_name) + "\n" + "\n" + 
@@ -367,7 +372,7 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
         keyboard_markup.row(back_btn)
-        await bot.send_message(message.from_user.id, "Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
+        await message.reply("Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
         await Upload_Simples.upload_audio_samples_step_3.set()
     else:
         await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
@@ -381,6 +386,10 @@ async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
     await state.update_data(audio_sample_name=msg.text)
     user_data = await state.get_data()
     document_id = user_data["audio_sample_message"].document.file_id
+    if len(str(user_data["audio_sample_name"])) >= 50:
+        await msg.reply('Название файла превышает 50 символов')
+        return
+        
     for  x in range(len(b_get_user_folders_list_with_keys (curent_user_id)[curent_folder_name])):
         if str(user_data["audio_sample_name"]).lower() == str(list(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name])[x]).lower():
             await msg.reply("Данная запись уже существует, введите другое имя : ")
@@ -388,6 +397,7 @@ async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
             
     await bot.send_message(msg.from_user.id,  'Идет загрузка файла....\nПодождите...')
     #await bot.download_file_by_id(file_id=document_id, destination= 'audio_samples/' + str(curent_user_id) + '/' + random_chrt + curent_file_extensions)
+    #await asyncio.sleep()
     await msg.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
     b_reg_new_audio_sample(curent_folder_name, user_data["audio_sample_name"], document_id)
     await state.finish()
