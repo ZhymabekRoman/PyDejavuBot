@@ -10,7 +10,7 @@
 import config
 #import time
 import logging
-import asyncio
+#import asyncio
 from aiogram.utils.exceptions import BotBlocked
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -49,9 +49,10 @@ def cache_update_curent_user_folders():
 def cache_update_curent_folder_name(folder_name):
     global curent_folder_name
     curent_folder_name = folder_name
-def cache_update_curent_user_id(msg):
+def cache_update_curent_user_id(message):
     global curent_user_id
-    curent_user_id = msg.chat.id
+    curent_user_id = message.chat.id
+    logging.info(f"Curent user id from cache : {curent_user_id}")
 def cache_update_query_global():
     global query_global
     query_global = types.CallbackQuery
@@ -107,20 +108,20 @@ def b_set_lang(user_id, lang_name):
         con.commit()
         con.close()
 
-def b_reg_new_folder(folder_name):
+def b_reg_new_folder(current_user_id, folder_name):
     new_data = {}
     new_data[folder_name] = {}
-    get_projects = b_get_user_folders_list_with_keys(curent_user_id)
+    get_projects = b_get_user_folders_list_with_keys(current_user_id)
     data_to_add = json.dumps(merge_two_dicts(get_projects, new_data))
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': curent_user_id})
+    cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': current_user_id})
     con.commit()
     con.close()
     cache_update_curent_user_folders()
     
-def b_reg_new_audio_sample(folder_name, sample_name, file_id):
-    abc = b_get_user_folders_list_with_keys(curent_user_id) # {'Djxhhx' : {'lllpl' : 'fuuff'}, 'Jdjdjd' : {}}
+def b_reg_new_audio_sample(current_user_id, folder_name, sample_name, file_id):
+    abc = b_get_user_folders_list_with_keys(current_user_id) # {'Djxhhx' : {'lllpl' : 'fuuff'}, 'Jdjdjd' : {}}
     new_data = {}
     new_data[sample_name] = file_id # присваевает новые значения из аргументов
     data_to_merge = merge_two_dicts(abc[folder_name], new_data)
@@ -128,7 +129,7 @@ def b_reg_new_audio_sample(folder_name, sample_name, file_id):
     data_to_add = json.dumps(abc)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("UPDATE users SET projects =  :0  WHERE User_id = :1", {'0': data_to_add, '1': curent_user_id})
+    cur.execute("UPDATE users SET projects =  :0  WHERE User_id = :1", {'0': data_to_add, '1': current_user_id})
     con.commit()
     con.close()
     
@@ -143,15 +144,15 @@ def b_delete_all_audio_sample_from_folder(folder_name):
     con.commit()
     con.close()
     
-def b_delete_audio_sample(folder_name, sample_name):
-    abc = b_get_user_folders_list_with_keys(curent_user_id)# {'Djxhhx' : {'lllpl' : 'fuuff'}, 'Jdjdjd' : {}}
+def b_delete_audio_sample(current_user_id, folder_name, sample_name):
+    abc = b_get_user_folders_list_with_keys(current_user_id)# {'Djxhhx' : {'lllpl' : 'fuuff'}, 'Jdjdjd' : {}}
     new_data = abc[folder_name]
     del new_data[sample_name]
     abc[folder_name] = new_data
     data_to_add = json.dumps(abc)
     con = sqlite3.connect('myTable.db', check_same_thread=False)
     cur = con.cursor()
-    cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': curent_user_id})
+    cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': current_user_id})
     con.commit()
     con.close()
 ##EndRegion ### END backends section ###
@@ -184,7 +185,7 @@ async def callback_handler(query: types.CallbackQuery, state):
     cache_update_curent_user_folders()
     cache_update_query_global()
     answer_data = query.data
-    if answer_data == 'welcome_msg':
+    if answer_data == 'welcome_message':
         await query.answer()
         await f_welcome_message(query.message, 'edit')
     if answer_data == 'set_lang-ru':
@@ -204,13 +205,13 @@ async def callback_handler(query: types.CallbackQuery, state):
     if answer_data == 'about_bot':
         await query.answer()
         keyboard_markup = types.InlineKeyboardMarkup()
-        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
+        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
         keyboard_markup.row(back_btn)
         await query.message.edit_text("Разработчик ботка : @Zhymabek_Roman\nТех.поддержка : @Zhymabek_Roman", reply_markup=keyboard_markup)
     if answer_data == 'bot_settings':
         await query.answer()
         keyboard_markup = types.InlineKeyboardMarkup()
-        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
+        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
         lang_btn = types.InlineKeyboardButton(f'Язык : {b_get_user_data(curent_user_id)[1]}', callback_data= 'edit_lang')
         keyboard_markup.row(back_btn,lang_btn)
         await query.message.edit_text("Настройки бота:", reply_markup=keyboard_markup)   
@@ -270,7 +271,7 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
                 #await query_global.answer('Данная папка уже существует! Введите другое имя', True)
                 await message.reply('Данная папка уже существует! Введите другое имя')
                 return
-        b_reg_new_folder(message.text)
+        b_reg_new_folder(message.chat.id, message.text)
         #await query_global.answer("Папка " + str(message.text) + " создана!")
         await message.reply("Папка " + str(message.text) + " создана!")
         await f_folder_list(message, 'start') 
@@ -300,7 +301,7 @@ async def f_folder_list(message : types.Message, type_start):
         folder_btn = types.InlineKeyboardButton(folder_name, callback_data= folder_name)
         keyboard_markup.row(folder_btn)
  
-    back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_msg')
+    back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
     keyboard_markup.row(back_btn)
     if type_start == 'start':
         await message.answer("Менеджер папок\n\nОбщее количество папок: {0}".format(b_get_user_folders_count(curent_user_id)), reply_markup=keyboard_markup)
@@ -331,7 +332,7 @@ async def manage_folder(message, folder_name):
 
 async def remove_audio_samples(message):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    for i in b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name]:
+    for i in b_get_user_folders_list_with_keys(message.chat.id)[curent_folder_name]:
         keyboard.add(str(i))
         
     # TODO : Make back Inline button
@@ -344,13 +345,13 @@ async def remove_audio_samples(message):
     
     
 @dp.message_handler(state= Remove_Simples.remove_audio_samples_step_2, content_types=types.ContentTypes.TEXT)
-async def f_remove_audio_samples_step_2(msg: types.Message, state: FSMContext):
-    await state.update_data(chosen_food=msg.text)
+async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContext):
+    await state.update_data(chosen_food=message.text)
     user_data = await state.get_data()
-    b_delete_audio_sample(curent_folder_name, user_data['chosen_food'])
-    await msg.reply(f"Сэмпл {user_data['chosen_food']} успешно удален.", reply_markup=types.ReplyKeyboardRemove())
+    b_delete_audio_sample(message.chat.id, curent_folder_name, user_data['chosen_food'])
+    await message.reply(f"Сэмпл {user_data['chosen_food']} успешно удален.", reply_markup=types.ReplyKeyboardRemove())
     await state.finish()
-    await f_folder_list(msg, 'start') 
+    await f_folder_list(message, 'start') 
     
 async def upload_audio_samples(message):
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -360,7 +361,7 @@ async def upload_audio_samples(message):
     await Upload_Simples.upload_audio_samples_step_2.set()
 
 
-@dp.message_handler(state= Upload_Simples.upload_audio_samples_step_2, content_types=types.ContentTypes.AUDIO | types.ContentTypes.DOCUMENT)
+@dp.message_handler(state = Upload_Simples.upload_audio_samples_step_2, content_types=types.ContentTypes.AUDIO | types.ContentTypes.DOCUMENT)
 async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContext):
     await state.update_data(audio_sample_message=message)
     user_data = await state.get_data()
@@ -377,31 +378,29 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
     else:
         await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
         return
-    
-    
-    
+ 
     
 @dp.message_handler(state= Upload_Simples.upload_audio_samples_step_3, content_types=types.ContentTypes.TEXT)
-async def f_upload_audio_samples_step_3(msg: types.Message, state: FSMContext):
-    await state.update_data(audio_sample_name=msg.text)
+async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContext):
+    await state.update_data(audio_sample_name=message.text)
     user_data = await state.get_data()
     document_id = user_data["audio_sample_message"].document.file_id
     if len(str(user_data["audio_sample_name"])) >= 50:
-        await msg.reply('Название файла превышает 50 символов')
+        await message.reply('Название файла превышает 50 символов')
         return
         
-    for  x in range(len(b_get_user_folders_list_with_keys (curent_user_id)[curent_folder_name])):
-        if str(user_data["audio_sample_name"]).lower() == str(list(b_get_user_folders_list_with_keys(curent_user_id)[curent_folder_name])[x]).lower():
-            await msg.reply("Данная запись уже существует, введите другое имя : ")
+    for  x in range(len(b_get_user_folders_list_with_keys (message.chat.id)[curent_folder_name])):
+        if str(user_data["audio_sample_name"]).lower() == str(list(b_get_user_folders_list_with_keys(message.chat.id)[curent_folder_name])[x]).lower():
+            await message.reply("Данная запись уже существует, введите другое имя : ")
             return
             
-    await bot.send_message(msg.from_user.id,  'Идет загрузка файла....\nПодождите...')
+    await bot.send_message(message.from_user.id,  'Идет загрузка файла....\nПодождите...')
     #await bot.download_file_by_id(file_id=document_id, destination= 'audio_samples/' + str(curent_user_id) + '/' + random_chrt + curent_file_extensions)
     #await asyncio.sleep()
-    await msg.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
-    b_reg_new_audio_sample(curent_folder_name, user_data["audio_sample_name"], document_id)
+    await message.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
+    b_reg_new_audio_sample(message.chat.id, curent_folder_name, user_data["audio_sample_name"], document_id)
     await state.finish()
-    await f_folder_list(msg, 'start') 
+    await f_folder_list(message, 'start') 
 
 @dp.errors_handler(exception=BotBlocked)
 async def error_bot_blocked(update: types.Update, exception: BotBlocked):
