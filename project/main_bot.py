@@ -8,7 +8,6 @@
 ##Region ### START imports section ###
 #from threading import Thread  #for using thread
 import config
-#import time
 import logging
 #import asyncio
 from aiogram.utils.exceptions import BotBlocked
@@ -17,8 +16,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext # for using FSM
 import sqlite3 # for working with DB
 import os.path # need for extract extions of file
-import json #нужен для работы с json-кодированными данными
-#import password_generate # фнукции для генерации паролей
+import json
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 ##EndRegion ### END imports section ###
 
@@ -78,10 +76,10 @@ def b_get_user_folders_count(user_id):
     return  len(b_get_user_folders_list_with_keys(user_id))
 
 def b_get_user_data(user_id):
-    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    con = sqlite3.connect('myTable.db')
     cur = con.cursor()
     cur.execute("SELECT * FROM users Where user_id= :0", {'0': user_id})
-    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    con = sqlite3.connect('myTable.db')
     out = cur.fetchone()
     con.close()
     print(out)
@@ -93,7 +91,7 @@ def b_delete_folder(user_id, folder_name):
     get_projects = b_get_user_folders_list_with_keys(user_id)
     del get_projects[folder_name]
     data_to_add = json.dumps(get_projects)
-    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    con = sqlite3.connect('myTable.db')
     cur = con.cursor()
     cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': user_id})
     con.commit()
@@ -101,14 +99,14 @@ def b_delete_folder(user_id, folder_name):
 
 def b_create_empety_db_data(user_id):
     if b_get_user_data(user_id) is None:
-        con = sqlite3.connect('myTable.db', check_same_thread=False)
+        con = sqlite3.connect('myTable.db')
         cur = con.cursor()
         cur.execute("INSERT INTO users VALUES (:0, :1, :2)", {'0': user_id, '1': '', '2': '{}'})
         con.commit()
         con.close()
 
 def b_set_lang(user_id, lang_name):
-        con = sqlite3.connect('myTable.db', check_same_thread=False)
+        con = sqlite3.connect('myTable.db')
         cur = con.cursor()
         cur.execute("UPDATE users SET Lang = :0 WHERE User_id = :1", {'0': lang_name, '1': user_id})
         con.commit()
@@ -119,7 +117,7 @@ def b_reg_new_folder(user_id, folder_name):
     new_data[folder_name] = {}
     get_projects = b_get_user_folders_list_with_keys(user_id)
     data_to_add = json.dumps(merge_two_dicts(get_projects, new_data))
-    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    con = sqlite3.connect('myTable.db')
     cur = con.cursor()
     cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': user_id})
     con.commit()
@@ -132,7 +130,7 @@ def b_reg_new_audio_sample(user_id, folder_name, sample_name, file_id):
     data_to_merge = merge_two_dicts(abc[folder_name], new_data)
     abc[folder_name] = data_to_merge
     data_to_add = json.dumps(abc)
-    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    con = sqlite3.connect('myTable.db')
     cur = con.cursor()
     cur.execute("UPDATE users SET projects =  :0  WHERE User_id = :1", {'0': data_to_add, '1': user_id})
     con.commit()
@@ -143,7 +141,7 @@ def b_delete_all_audio_sample_from_folder(user_id, folder_name):
     new_data = {}
     abc[folder_name] = new_data
     data_to_add = json.dumps(abc)
-    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    con = sqlite3.connect('myTable.db')
     cur = con.cursor()
     cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': user_id})
     con.commit()
@@ -155,7 +153,7 @@ def b_delete_audio_sample(user_id, folder_name, sample_name):
     del new_data[sample_name]
     abc[folder_name] = new_data
     data_to_add = json.dumps(abc)
-    con = sqlite3.connect('myTable.db', check_same_thread=False)
+    con = sqlite3.connect('myTable.db')
     cur = con.cursor()
     cur.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': data_to_add, '1': user_id})
     con.commit()
