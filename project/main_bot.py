@@ -48,9 +48,10 @@ class Remove_Simples(StatesGroup):
 
 def b_get_text_in_lang(data):
 	dict_miltilang = {
-	    'fruit': 'mango',
-	    '1' : {'Ru' : '🎛️ Настройки : Выбран русский язык 🇷🇺','En' : "🎛️ Setings : Selected English 🇺🇸 language!"},
-	    '2' : {'Ru' : 'Настройки ⚙️','En' : 'Settings ⚙️'}
+	    '1' : {'Ru' : '🎛️ Настройки : Выбран русский язык 🇷🇺',
+	             'En' : "🎛️ Setings : Selected English 🇺🇸 language!"},
+	    '2' : {'Ru' : 'Настройки ⚙️',
+	             'En' : 'Settings ⚙️'}
 	}
 	return dict_miltilang[data][lang_type]
 
@@ -224,12 +225,7 @@ async def callback_handler(query: types.CallbackQuery, state):
             await query.answer('Список папок превышает 7 папок', True)
     if answer_data == 'folder_delete':
         await query.answer()
-        keyboard_markup = types.InlineKeyboardMarkup()
-        delete_btn = types.InlineKeyboardButton('Да!', callback_data= 'process_to_delete_folder')
-        keyboard_markup.row(delete_btn)
-        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
-        keyboard_markup.row(back_btn)
-        await query.message.edit_text(f"Вы действительно хотите удалить папку {curent_folder_name}?\nЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ!", reply_markup=keyboard_markup)
+        await f_delete_folder_step_1(query.message)
     if answer_data == 'upload_audio_samples':
         await query.answer()
         await f_upload_audio_samples_step_1(query.message)
@@ -240,15 +236,25 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         await f_remove_audio_samples_step_1(query.message)
     if answer_data == 'process_to_delete_folder':
-        b_delete_folder(query.message.chat.id, curent_folder_name)
-        await query.answer(f"Папка {curent_folder_name} удалена!")
-        await query.answer()
-        await f_folder_list(query.message, 'edit')
+        await f_delete_folder_step_2(query.message)
     for w in b_get_user_folders_list_with_keys(query.message.chat.id):
         if answer_data == w:
             await state.finish()
             await query.answer()
             await manage_folder(query.message, str(w))
+
+async def f_delete_folder_step_1(message):
+    keyboard_markup = types.InlineKeyboardMarkup()
+    delete_btn = types.InlineKeyboardButton('Да!', callback_data= 'process_to_delete_folder')
+    keyboard_markup.row(delete_btn)
+    back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
+    keyboard_markup.row(back_btn)
+    await message.edit_text(f"Вы действительно хотите удалить папку {curent_folder_name}?\nЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ!", reply_markup=keyboard_markup)
+
+async def f_delete_folder_step_2(message):
+    b_delete_folder(message.chat.id, curent_folder_name)
+    await message.edit_text(f"Папка {curent_folder_name} удалена!")
+    await f_folder_list(message, 'start')
 
 @dp.message_handler(state = Create_Folders.create_new_folder_step_1, content_types=types.ContentTypes.TEXT)
 async def f_create_new_folder_step_1(message: types.Message):
@@ -290,7 +296,8 @@ async def f_folder_list(message : types.Message, type_start):
     keyboard_markup.row(create_new_folder_btn)
     
     for folder_name in b_get_user_folders_list_with_keys(message.chat.id):
-        folder_btn = types.InlineKeyboardButton(folder_name, callback_data= folder_name)
+        get_sample_count = len(b_get_user_folders_list_with_keys(message.chat.id)[folder_name])
+        folder_btn = types.InlineKeyboardButton(f"{folder_name} ({get_sample_count})", callback_data= folder_name)
         keyboard_markup.row(folder_btn)
  
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
@@ -325,6 +332,7 @@ async def manage_folder(message, folder_name):
 @dp.message_handler(state= Remove_Simples.remove_audio_samples_step_1)
 async def f_remove_audio_samples_step_1(message):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    
     keyboard.add("<<< Отмена >>>")
     for i in b_get_user_folders_list_with_keys(message.chat.id)[curent_folder_name]:
         keyboard.add(str(i))
@@ -344,7 +352,13 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         await state.finish()
         await f_folder_list(message, 'start') 
         return 
-    b_delete_audio_sample(message.chat.id, curent_folder_name, user_data['chosen_sample'])
+    try:
+        b_delete_audio_sample(message.chat.id, curent_folder_name, user_data['chosen_sample'])
+    except KeyError:
+        await message.reply("Такого аудио сэмпла нету. Выходим ...", reply_markup=types.ReplyKeyboardRemove())
+        await state.finish()
+        await f_folder_list(message, 'start') 
+        return 
     await message.reply(f"Сэмпл {user_data['chosen_sample']} успешно удален.", reply_markup=types.ReplyKeyboardRemove())
     await state.finish()
     await f_folder_list(message, 'start') 
@@ -386,8 +400,8 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         await message.reply('Название файла превышает 50 символов')
         return
         
-    for  x in range(len(b_get_user_folders_list_with_keys (message.chat.id)[curent_folder_name])):
-        if str(user_data["audio_sample_name"]).lower() == str(list(b_get_user_folders_list_with_keys(message.chat.id)[curent_folder_name])[x]).lower():
+    for  x in b_get_user_folders_list_with_keys (message.chat.id)[curent_folder_name]:
+        if str(user_data["audio_sample_name"]).lower() == str(x).lower():
             await message.reply("Данная запись уже существует, введите другое имя : ")
             return
             
