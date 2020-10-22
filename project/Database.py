@@ -31,9 +31,8 @@ class SQLighter:
         with self.connection:
             ### Получаем папки пользывателя
             folders_list = self.select_user_folders_list(user_id)
-            ### Создаем словарь с названием папки и стренным внутри еще одним пустым словарем, что бы хранить там данные сэмлов : ) 
-            new_folder = {}
-            new_folder[folder_name] = {}
+            ### Создаем словарь с названием папки и стренным внутри еще одним пустым словарем, что бы хранить там данные сэмлов : )
+            new_folder = {folder_name: {}}
             ### Мерджуем два словаря : новый и старый
             data_to_add = merge_two_dicts(folders_list, new_folder)
             ### Коммитим, предварительно упаковав в json : )
@@ -60,9 +59,8 @@ class SQLighter:
         with self.connection:
             ### Получаем список сэмплов текущей папкм
             folder_samples = self.select_user_folders_list(user_id)[folder_name]
-            ### Создаем словарь с названием нового сэмла и file_id сэмпла : ) 
-            new_sample = {}
-            new_sample[sample_name] = file_id
+            ### Создаем словарь с названием нового сэмла и file_id сэмпла : )
+            new_sample = {sample_name: file_id}
             ### Мерджуем старые сэмплы с новыми из текущей папкм
             curent_folder_samples = merge_two_dicts(folder_samples, new_sample)
             ### Обновляем  сэмплы текущей папки в список папок
