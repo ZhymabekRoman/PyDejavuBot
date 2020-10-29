@@ -51,10 +51,14 @@ class SQLighter:
         with self.connection:
             self.cursor.execute("INSERT INTO users VALUES (:0, :1, :2)", {'0': user_id, '1': '', '2': '{}'})
             
+    def get_lang(self, user_id):
+        with self.connection:
+            return self.cursor.execute("SELECT lang FROM users Where user_id= :0", {'0': user_id}).fetchone()[0]
+            
     def set_lang(self, user_id, lang_name):
         with self.connection:
             self.cursor.execute("UPDATE users SET lang = :0 WHERE user_id = :1", {'0': lang_name, '1': user_id})
-            
+
     def register_audio_sample(self, user_id, folder_name, sample_name, file_id):
         with self.connection:
             ### Получаем список сэмплов текущей папкм
