@@ -1,2 +1,0 @@
-Sat Oct 31 09:56:05 2020 Reading hash table data/audio_samples/fingerprint_db/1022197197/op.fpdb
-data/audio_samples/normalized/1022197197/op/787878.mp3 (209 hashes)
