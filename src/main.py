@@ -145,7 +145,11 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
     message_text = message.text + "\n\nРегистрируем аудио хэшов в базу данных..."
     await message.edit_text(message_text + " Выполняем...")
     ### -n 500 -H 2 -F 20 -h 40
-    args = ['python3', 'audfprint.py', 'new', '-d', fingerprint_db, input_file]; print(args)
+    if os.path.exists(fingerprint_db) is False:
+        db_hashes_add_method = 'new'
+    elif os.path.exists(fingerprint_db) is True:
+        db_hashes_add_method = 'add'
+    args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file]; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate()
     if data[1] == "":
