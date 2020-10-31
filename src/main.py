@@ -220,7 +220,7 @@ async def quiz_mode_step_1(message: types.Message):
     back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
     keyboard_markup.row(back_btn)
     await message.edit_text(f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\nЖду от тебя голосовые заметки", reply_markup=keyboard_markup)
-    await Upload_Simples.upload_audio_samples_step_2.set()
+    await Upload_Queries.upload_query_step_2.set()
 
 @dp.message_handler(state = Upload_Queries.upload_query_step_2)
 async def quiz_mode_step_2(message: types.Message, state: FSMContext):
