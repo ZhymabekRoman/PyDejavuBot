@@ -469,8 +469,7 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         return
     managment_msg = await message.reply(f"Сэмпл {user_data['chosen_sample']} в процесе удаления ...", reply_markup=types.ReplyKeyboardRemove()) 
     await delete_audio_hashes(path_list.fingerprint_db(), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
-
-#    await message.reply(f"Сэмпл {user_data['chosen_sample']} успешно удален.")
+    await bot.edit_message_text(chat_id=managment_msg.chat.id, message_id=managment_msg.message_id, text= f"Сэмпл {user_data['chosen_sample']} успешно удален.")
     await state.finish()
     await f_folder_list(message, 'start') 
     
