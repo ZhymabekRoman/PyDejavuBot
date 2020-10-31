@@ -284,8 +284,10 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     os.makedirs(path_list.tmp_audio_samples())
     os.makedirs(path_list.non_normalized_audio_samples())
     os.makedirs(path_list.normalized_audio_samples())
-    os.makedirs(path_list.fingerprint_db_dir_path())
-
+    try:
+        os.makedirs(path_list.fingerprint_db_dir_path())
+    except:
+        pass
     db_worker = SQLighter(config.database_name)
     db_worker.create_folder(message.chat.id, user_data['folder_name'])
     db_worker.close()
@@ -469,7 +471,10 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         return
     managment_msg = await message.reply(f"Сэмпл {user_data['chosen_sample']} в процесе удаления ...", reply_markup=types.ReplyKeyboardRemove()) 
     await delete_audio_hashes(path_list.fingerprint_db(), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
-    await bot.edit_message_text(chat_id=managment_msg.chat.id, message_id=managment_msg.message_id, text= f"Сэмпл {user_data['chosen_sample']} успешно удален.")
+
+    print(message)
+#    await message.reply(f"Сэмпл {user_data['chosen_sample']} успешно удален.")
+
     await state.finish()
     await f_folder_list(message, 'start') 
     
