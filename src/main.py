@@ -159,7 +159,12 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
         message_text += "\nОбнаружены ошибки:\n" + code(f"{data[1]}\n") 
         managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
         return True, managment_msg
-        
+
+async def delete_audio_hashes(fingerprint_db, sample_name):
+    args = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name]; print(args)
+    process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
+    data = process.communicate()
+
 ##EndRegion ### END backends section ###
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
@@ -331,7 +336,7 @@ async def f_delete_folder_step_2(callback_query: types.CallbackQuery):
     db_worker.unregister_all_audio_sample(callback_query.message.chat.id, get_selected_folder_name(callback_query.message.chat.id))
     db_worker.delete_folder(callback_query.message.chat.id, get_selected_folder_name(callback_query.message.chat.id))
     db_worker.close()
-    
+
     await callback_query.message.edit_text(f"Папка {get_selected_folder_name(callback_query.message.chat.id)} удалена!")
     await f_folder_list(callback_query.message, 'start')
     
@@ -444,6 +449,7 @@ async def f_remove_audio_samples_step_1(message):
 async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContext):
     await state.update_data(chosen_sample=message.text)
     user_data = await state.get_data()
+    path_list = get_path(message.chat.id, get_selected_folder_name(message.chat.id))
     if user_data['chosen_sample'] == "<<< Отмена >>>":
         logging.info("<<< Отмена >>>")
         await message.reply("Вы отменили операцию", reply_markup=types.ReplyKeyboardRemove())
@@ -458,8 +464,11 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         await message.reply("Такого аудио сэмпла нету. Выходим ...", reply_markup=types.ReplyKeyboardRemove())
         await state.finish()
         await f_folder_list(message, 'start') 
-        return 
-    await message.reply(f"Сэмпл {user_data['chosen_sample']} успешно удален.", reply_markup=types.ReplyKeyboardRemove())
+        return
+    managment_msg = await message.reply(f"Сэмпл {user_data['chosen_sample']} в процесе удаления ...", reply_markup=types.ReplyKeyboardRemove()) 
+    await delete_audio_hashes(path_list.fingerprint_db(), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+
+#    await managment_msg.edit_text(f"Сэмпл {user_data['chosen_sample']} успешно удален.")
     await state.finish()
     await f_folder_list(message, 'start') 
     
