@@ -47,7 +47,10 @@ class Upload_Simples(StatesGroup):
 class Remove_Simples(StatesGroup):
     remove_audio_samples_step_1 = State()
     remove_audio_samples_step_2 = State()
-    
+class Upload_Queries(StatesGroup):
+    upload_query_step_1 = State()
+    upload_query_step_2 = State()
+    upload_query_step_3 = State()
 class get_path:
     def __init__(self, user_id, user_folder):
         self.user_id = user_id
@@ -210,6 +213,43 @@ async def quiz_mode_step_0(message: types.Message):
     keyboard_markup.row(back_btn)
     await message.edit_text("Выберите папку : ", reply_markup=keyboard_markup)   
     await Create_Folders.create_new_folder_step_2.set()
+    
+@dp.message_handler(state = Upload_Queries.upload_query_step_2)
+async def quiz_mode_step_1(message: types.Message):
+    keyboard_markup = types.InlineKeyboardMarkup()
+    back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+    keyboard_markup.row(back_btn)
+    await message.edit_text(f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\nЖду от тебя голосовые заметки", reply_markup=keyboard_markup)
+    await Upload_Simples.upload_audio_samples_step_2.set()
+
+@dp.message_handler(state = Upload_Queries.upload_query_step_2, content_types=types.ContentTypes.DOCUMENT | types.ContentTypes.AUDIO)
+async def quiz_mode_step_2(message: types.Message, state: FSMContext):
+    print(message)
+#    await state.update_data(audio_sample_message=message)
+#    await state.update_data(audio_sample_content_type=message.content_type)
+#    user_data = await state.get_data()
+#    if user_data["audio_sample_content_type"] == "document":
+#        await state.update_data(audio_sample_file_info=message.document)
+#        name_file = user_data["audio_sample_message"].document.file_name
+#        await state.update_data(audio_sample_file_extensions =  os.path.splitext(name_file)[1])
+#    elif user_data["audio_sample_content_type"] == "audio":
+#        await state.update_data(audio_sample_file_info=message.audio)
+#        if message.audio.mime_type == "audio/mpeg":
+#            await state.update_data(audio_sample_file_extensions =  ".mp3")
+#        elif message.audio.mime_type == "audio/x-opus+ogg":
+#            await state.update_data(audio_sample_file_extensions =  ".ogg")
+#        else:
+#            await state.update_data(audio_sample_file_extensions =  "NULL")
+#    user_data = await state.get_data()
+#    if user_data["audio_sample_file_extensions"] in ('.wav', '.mp3', '.wma', '.ogg'):
+#        keyboard_markup = types.InlineKeyboardMarkup()
+#        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
+#        keyboard_markup.row(back_btn)
+#        await message.reply("Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
+#        await Upload_Simples.upload_audio_samples_step_3.set()
+#    else:
+#        await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
+#        return
 
 async def f_welcome_message(message: types.Message, type_start):
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -305,7 +345,7 @@ async def manage_folder(message, folder_name):
     keyboard_markup.row(upload_audio_samples_btn)
     remove_audio_samples_btn = types.InlineKeyboardButton('Удалить аудио сэмплы', callback_data= 'remove_audio_samples')
     keyboard_markup.row(remove_audio_samples_btn)
-    quiz_mode_btn = types.InlineKeyboardButton('Режим Викторины', callback_data= 'quiz_mode')
+    quiz_mode_btn = types.InlineKeyboardButton('Режим Викторины', callback_data= 'quiz_mode_1')
     keyboard_markup.row(quiz_mode_btn)
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
     keyboard_markup.row(back_btn)
@@ -548,6 +588,9 @@ async def callback_handler(query: types.CallbackQuery, state):
         await quiz_mode_step_0(query.message)
 #    if answer_data == 'process_to_delete_folder':
 #        await f_delete_folder_step_2(query.message)
+    if answer_data == 'quiz_mode_1':
+        await query.answer()
+        await quiz_mode_step_1(query.message)
     for w in get_user_folders_list(query.message.chat.id):
         if answer_data == w:
             await state.finish()
