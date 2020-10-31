@@ -214,7 +214,7 @@ async def quiz_mode_step_0(message: types.Message):
     await message.edit_text("Выберите папку : ", reply_markup=keyboard_markup)   
     await Create_Folders.create_new_folder_step_2.set()
     
-@dp.message_handler(state = Upload_Queries.upload_query_step_2)
+#@dp.message_handler(state = Upload_Queries.upload_query_step_2)
 async def quiz_mode_step_1(message: types.Message):
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
