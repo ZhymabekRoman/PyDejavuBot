@@ -1,6 +1,0 @@
-*.pyc
-*.db
-__pycache__
-config.py
-poetry.lock
-audio_samples/
