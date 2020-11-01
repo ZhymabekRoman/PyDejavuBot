@@ -21,6 +21,7 @@ import os.path # need for extract extions of file
 import shutil
 import subprocess
 import sys
+from random import randint
 #import json
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 ##EndRegion ### END imports section ###
@@ -51,6 +52,7 @@ class Upload_Queries(StatesGroup):
     upload_query_step_1 = State()
     upload_query_step_2 = State()
     upload_query_step_3 = State()
+    
 class get_path:
     def __init__(self, user_id, user_folder):
         self.user_id = user_id
@@ -65,7 +67,13 @@ class get_path:
         return f'data/audio_samples/fingerprint_db/{self.user_id}/{self.select_user_folder}.fpdb'
     def fingerprint_db_dir_path(self):
         return f'data/audio_samples/fingerprint_db/{self.user_id}/'
-
+    def tmp_query_audio(self, file_name=""):
+        return f'data/query_samples/tmp/{self.user_id}/{self.select_user_folder}/{file_name}'
+    def non_normalized_query_audio(self, file_name=""):
+        return f'data/query_samples/non_normalized/{self.user_id}/{self.select_user_folder}/{file_name}'
+    def normalized_query_audio(self, file_name=""):
+        return f'data/query_samples/normalized/{self.user_id}/{self.select_user_folder}/{file_name}'
+        
 def b_get_text_in_lang(data):
 	lang_type = "En"
 	dict_miltilang = {
@@ -163,6 +171,16 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
         managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
         return True, managment_msg
 
+async def match_audio_query(message, input_file, fingerprint_db):
+    message_text = message.text + "\n\nИщем аудио хэши в базе данных..."
+    await message.edit_text(message_text + " Выполняем...")
+    args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]; print(args)
+    process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
+    data = process.communicate()
+    message_text += "\n\nРезультат:\n" + code(f"{data[1]}\n") 
+    managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
+    return True, managment_msg
+        
 async def delete_audio_hashes(fingerprint_db, sample_name):
     args = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name]; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
@@ -220,36 +238,48 @@ async def quiz_mode_step_1(message: types.Message):
     back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
     keyboard_markup.row(back_btn)
     await message.edit_text(f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\nЖду от тебя голосовые заметки", reply_markup=keyboard_markup)
-    await Upload_Queries.upload_query_step_2.set()
+    await Upload_Queries.upload_query_step_1.set()
 
-@dp.message_handler(state = Upload_Queries.upload_query_step_2)
+@dp.message_handler(state = Upload_Queries.upload_query_step_1, content_types=types.ContentTypes.VOICE)
 async def quiz_mode_step_2(message: types.Message, state: FSMContext):
-    print(message)
-#    await state.update_data(audio_sample_message=message)
-#    await state.update_data(audio_sample_content_type=message.content_type)
-#    user_data = await state.get_data()
-#    if user_data["audio_sample_content_type"] == "document":
-#        await state.update_data(audio_sample_file_info=message.document)
-#        name_file = user_data["audio_sample_message"].document.file_name
-#        await state.update_data(audio_sample_file_extensions =  os.path.splitext(name_file)[1])
-#    elif user_data["audio_sample_content_type"] == "audio":
-#        await state.update_data(audio_sample_file_info=message.audio)
-#        if message.audio.mime_type == "audio/mpeg":
-#            await state.update_data(audio_sample_file_extensions =  ".mp3")
-#        elif message.audio.mime_type == "audio/x-opus+ogg":
-#            await state.update_data(audio_sample_file_extensions =  ".ogg")
-#        else:
-#            await state.update_data(audio_sample_file_extensions =  "NULL")
-#    user_data = await state.get_data()
-#    if user_data["audio_sample_file_extensions"] in ('.wav', '.mp3', '.wma', '.ogg'):
-#        keyboard_markup = types.InlineKeyboardMarkup()
-#        back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
-#        keyboard_markup.row(back_btn)
-#        await message.reply("Введите название вашей аудио записи : ", reply_markup=keyboard_markup)
-#        await Upload_Simples.upload_audio_samples_step_3.set()
-#    else:
-#        await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
-#        return
+    file_id = message.voice.file_id
+    path_list = get_path(message.chat.id, get_selected_folder_name(message.chat.id))
+    if message.voice.mime_type == "audio/mpeg":
+        audio_sample_file_extensions =  ".mp3"
+    elif message.voice.mime_type == "audio/ogg":
+        audio_sample_file_extensions =  ".ogg"
+    else:
+        audio_sample_file_extensions =  "NULL"
+    random_nums = randint(1000, 9999)
+    query_audio_full_name= f"{random_nums}{audio_sample_file_extensions}"
+    query_audio_name = f"{random_nums}"
+    if audio_sample_file_extensions in ('.mp3', '.ogg'):
+        managment_msg = await message.reply('Загрузка файла... Подождите...')
+        await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_query_audio(query_audio_full_name)); await asyncio.sleep(1)
+        managment_msg = await managment_msg.edit_text("Загрузка файла... Готово ✅")
+        
+        # Stage 1 : check audio files for integrity and convert them
+        ffmpeg_status, managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_query_audio(query_audio_full_name), path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
+        if ffmpeg_status is False:
+            #os.remove(out_file) ### TODO Remove trash files 
+            await state.finish()
+            await f_folder_list(message, 'start') 
+            return
+    
+        # Stage 2 : mormalize audio
+        ffmpeg_normalizing_status, managment_msg = await normalize_audio(managment_msg, path_list.non_normalized_query_audio(query_audio_name + ".mp3"), path_list.normalized_query_audio(query_audio_name + ".mp3"))
+        if ffmpeg_normalizing_status is False:
+            await state.finish()
+            await f_folder_list(message, 'start') 
+            return
+            
+        audfprint_status, managment_msg = await match_audio_query(managment_msg, path_list.normalized_query_audio(query_audio_name + ".mp3"), path_list.fingerprint_db())
+        
+        await state.finish()
+        await f_folder_list(message, 'start') 
+    else:
+        await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
+        return
 
 async def f_welcome_message(message: types.Message, type_start):
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -324,6 +354,9 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     os.makedirs(path_list.tmp_audio_samples())
     os.makedirs(path_list.non_normalized_audio_samples())
     os.makedirs(path_list.normalized_audio_samples())
+    os.makedirs(path_list.tmp_query_audio())
+    os.makedirs(path_list.non_normalized_query_audio())
+    os.makedirs(path_list.normalized_query_audio())
     try:
         os.makedirs(path_list.fingerprint_db_dir_path())
     except:
@@ -372,6 +405,9 @@ async def f_delete_folder_step_2(callback_query: types.CallbackQuery):
     shutil.rmtree(path_list.tmp_audio_samples())
     shutil.rmtree(path_list.non_normalized_audio_samples())
     shutil.rmtree(path_list.normalized_audio_samples())
+    shutil.rmtree(path_list.tmp_query_audio())
+    shutil.rmtree(path_list.non_normalized_query_audio())
+    shutil.rmtree(path_list.non_normalized_query_audio())
     try:
         shutil.rmtree(path_list.fingerprint_db())
     except:
@@ -474,7 +510,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     
     await message.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
     await state.finish()
-    await f_folder_list(message, 'start') 
+    await f_folder_list(message, 'start')
 
 @dp.message_handler(state= Remove_Simples.remove_audio_samples_step_1)
 async def f_remove_audio_samples_step_1(message):
