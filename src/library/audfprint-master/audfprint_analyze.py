@@ -287,7 +287,8 @@ class Analyzer(object):
         else:
             # The sgram is identically zero, i.e., the input signal was identically
             # zero.  Not good, but let's let it through for now.
-            print("find_peaks: Warning: input signal is identically zero.")
+            #print("find_peaks: Warning: input signal is identically zero.")
+            pass
         # High-pass filter onset emphasis
         # [:-1,] discards top bin (nyquist) of sgram so bins fit in 8 bits
         sgram = np.array([scipy.signal.lfilter([1, -1],
