@@ -159,9 +159,9 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
     elif os.path.exists(fingerprint_db) is True:
         db_hashes_add_method = 'add'
     if config.audfprint_mode == '0':
-        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file]; print(args)
+        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '500', '-X', '-F', '80']; print(args)
     elif config.audfprint_mode == '1':
-        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '500', '-F', '80', '-H', '2', '-X', '-b', '500']; print(args)
+        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '500', '-F', '3', '-H', '8', '-X', '-b', '100']; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate()
     if data[1] == "":
@@ -176,9 +176,9 @@ async def match_audio_query(message, input_file, fingerprint_db):
     message_text = message.text + "\n\nИщем аудио хэши в базе данных..."
     await message.edit_text(message_text + " Выполняем...")
     if config.audfprint_mode == '0':
-        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]; print(args)
+        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '500', '-D', '2000', '-X', '-F', '80']; print(args)
     elif config.audfprint_mode == '1':
-        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '500', '-F', '80', '-H', '2', '-X', '-b', '500', '-D', '2000']; print(args)
+        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '500', '-F', '3', '-H', '8', '-X', '-b', '100', '-D', '2000']; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate(); print(data)
     file = open("out.txt", "r")
