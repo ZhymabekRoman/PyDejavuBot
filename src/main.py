@@ -413,7 +413,7 @@ async def f_delete_folder_step_2(callback_query: types.CallbackQuery):
     shutil.rmtree(path_list.normalized_audio_samples())
     shutil.rmtree(path_list.tmp_query_audio())
     shutil.rmtree(path_list.non_normalized_query_audio())
-    shutil.rmtree(path_list.non_normalized_query_audio())
+    shutil.rmtree(path_list.normalized_query_audio())
     try:
         shutil.rmtree(path_list.fingerprint_db())
     except:
