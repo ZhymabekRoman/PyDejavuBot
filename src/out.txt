@@ -1,2 +1,1 @@
-Mon Nov  2 11:18:28 2020 Reading hash table data/audio_samples/fingerprint_db/1022197197/dfg.fpdb
-Matched data/query_samples/normalized/1022197197/dfg/7909.mp3 4.7 sec 430 raw hashes as data/audio_samples/normalized/1022197197/dfg/dfgdfg.mp3 at    3.3 s with    23 of    23 common hashes at rank  0
+123123

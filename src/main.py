@@ -15,14 +15,12 @@ from aiogram.utils.markdown import text, bold, italic, code, pre
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext # for using FSM
-#import sqlite3 # for working with DB
 import os
 import os.path # need for extract extions of file
 import shutil
 import subprocess
 import sys
 from random import randint
-#import json
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 ##EndRegion ### END imports section ###
 
@@ -160,7 +158,10 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
         db_hashes_add_method = 'new'
     elif os.path.exists(fingerprint_db) is True:
         db_hashes_add_method = 'add'
-    args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file]; print(args)
+    if config.audfprint_mode == '0':
+        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '2', '-F', '1']; print(args)
+    elif config.audfprint_mode == '1':
+        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file]; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate()
     if data[1] == "":
@@ -174,13 +175,17 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
 async def match_audio_query(message, input_file, fingerprint_db):
     message_text = message.text + "\n\nИщем аудио хэши в базе данных..."
     await message.edit_text(message_text + " Выполняем...")
-    args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-o','out.txt']; print(args)
-    process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8', universal_newlines=True)
+    if config.audfprint_mode == '0':
+        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '2', '-F', '1']; print(args)
+    elif config.audfprint_mode == '1':
+        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]; print(args)
+    process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate(); print(data)
-    
-    message_text += " Готово ✅\n\nРезультат:\n" + code("{}\n".format(data[0]))
+    file = open("out.txt", "r")
+    out = file.read()
+    file.close()
+    message_text += " Готово ✅\n\nРезультат:\n" + code("{}\n".format(out))
     managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
-    return True, managment_msg
         
 async def delete_audio_hashes(fingerprint_db, sample_name):
     args = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name]; print(args)
@@ -274,7 +279,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
             await f_folder_list(message, 'start') 
             return
             
-        audfprint_status, managment_msg = await match_audio_query(managment_msg, path_list.normalized_query_audio(query_audio_name + ".mp3"), path_list.fingerprint_db())
+        await match_audio_query(managment_msg, path_list.normalized_query_audio(query_audio_name + ".mp3"), path_list.fingerprint_db())
         
         await state.finish()
         await f_folder_list(message, 'start') 

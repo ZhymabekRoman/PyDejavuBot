@@ -25,6 +25,7 @@ import audfprint_analyze
 import audio_read
 import stft
 
+import ntpath
 
 def process_info():
     rss = usrtime = 0
@@ -395,6 +396,11 @@ class Matcher(object):
             # No matches returned at all
             nhashaligned = 0
             print("No match")
+
+            file = open("out.txt", "w")
+            file.write("No match")
+            file.close()
+            
             if self.verbose:
                 msgrslt.append("NOMATCH " + qrymsg)
             else:
@@ -402,7 +408,15 @@ class Matcher(object):
         else:
             for (tophitid, nhashaligned, aligntime, nhashraw, rank,
                  min_time, max_time) in rslts:
-                print(ht.names[tophitid])
+
+                query_audio_full_path = ht.names[tophitid]
+                query_audio_basename = ntpath.basename(query_audio_full_path)
+                filename, file_extension = os.path.splitext(query_audio_basename)
+
+                print(filename)
+                file = open("out.txt", "w")
+                file.write(filename)
+                file.close()
                # figure the number of raw and aligne
                 if self.verbose:
                     if self.find_time_range:
