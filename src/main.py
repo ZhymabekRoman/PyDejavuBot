@@ -178,7 +178,7 @@ async def match_audio_query(message, input_file, fingerprint_db):
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8', universal_newlines=True)
     data = process.communicate(); print(data)
     
-    message_text += " Готово ✅\n\nРезультат:\n" + code(r"{}\n".format(data[0]))
+    message_text += " Готово ✅\n\nРезультат:\n" + code("{}\n".format(data[0]))
     managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
     return True, managment_msg
         
