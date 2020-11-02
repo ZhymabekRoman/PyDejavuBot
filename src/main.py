@@ -159,9 +159,9 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
     elif os.path.exists(fingerprint_db) is True:
         db_hashes_add_method = 'add'
     if config.audfprint_mode == '0':
-        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '2', '-F', '1']; print(args)
-    elif config.audfprint_mode == '1':
         args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file]; print(args)
+    elif config.audfprint_mode == '1':
+        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '500', '-F', '80', '-H', '2', '-X', '-b', '500']; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate()
     if data[1] == "":
@@ -176,9 +176,9 @@ async def match_audio_query(message, input_file, fingerprint_db):
     message_text = message.text + "\n\nИщем аудио хэши в базе данных..."
     await message.edit_text(message_text + " Выполняем...")
     if config.audfprint_mode == '0':
-        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '2', '-F', '1']; print(args)
-    elif config.audfprint_mode == '1':
         args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]; print(args)
+    elif config.audfprint_mode == '1':
+        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '500', '-F', '80', '-H', '2', '-X', '-b', '500', '-D', '2000']; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate(); print(data)
     file = open("out.txt", "r")
@@ -188,7 +188,7 @@ async def match_audio_query(message, input_file, fingerprint_db):
     managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
         
 async def delete_audio_hashes(fingerprint_db, sample_name):
-    args = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name]; print(args)
+    args = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name, '-H', '2']; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate()
 
