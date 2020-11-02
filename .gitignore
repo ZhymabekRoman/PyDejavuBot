@@ -5,3 +5,4 @@ config.py
 poetry.lock
 audio_samples/
 query_samples/
+out.txt
