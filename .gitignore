@@ -3,6 +3,5 @@
 __pycache__
 config.py
 poetry.lock
-audio_samples/
-query_samples/
+data/
 out.txt
