@@ -394,6 +394,7 @@ class Matcher(object):
         if len(rslts) == 0:
             # No matches returned at all
             nhashaligned = 0
+            print("No match")
             if self.verbose:
                 msgrslt.append("NOMATCH " + qrymsg)
             else:
@@ -401,8 +402,8 @@ class Matcher(object):
         else:
             for (tophitid, nhashaligned, aligntime, nhashraw, rank,
                  min_time, max_time) in rslts:
-                print("{" + "'" +  "song_name" + "': " + "'" + str(ht.names[tophitid]) + "'" + "}")
-                # figure the number of raw and aligned matches for top hit
+                print(ht.names[tophitid])
+               # figure the number of raw and aligne
                 if self.verbose:
                     if self.find_time_range:
                         msg = ("Matched {:6.1f} s starting at {:6.1f} s in {:s}"

@@ -1,0 +1,2 @@
+Sun Nov  1 19:19:45 2020 Reading hash table data/audio_samples/fingerprint_db/1022197197/228.fpdb
+NOMATCH data/query_samples/normalized/1022197197/228/6880.mp3 1.1 sec 168 raw hashes

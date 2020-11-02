@@ -174,10 +174,11 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
 async def match_audio_query(message, input_file, fingerprint_db):
     message_text = message.text + "\n\nИщем аудио хэши в базе данных..."
     await message.edit_text(message_text + " Выполняем...")
-    args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]; print(args)
+    args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-o','out.txt']; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate()
-    message_text += "\n\nРезультат:\n" + code(f"{data[1]}\n") 
+    print(data)
+    message_text += "\n\nРезультат:\n" + code(f"{data}\n") 
     managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
     return True, managment_msg
         
