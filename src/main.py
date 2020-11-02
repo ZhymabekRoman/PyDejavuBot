@@ -445,7 +445,9 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         await state.update_data(audio_sample_file_extensions =  os.path.splitext(name_file)[1])
     elif user_data["audio_sample_content_type"] == "audio":
         await state.update_data(audio_sample_file_info=message.audio)
-        if message.audio.mime_type == "audio/mpeg":
+        if message.audio.mime_type == "audio/mp3":
+            await state.update_data(audio_sample_file_extensions =  ".mp3")
+        elif message.audio.mime_type == "audio/mpeg":
             await state.update_data(audio_sample_file_extensions =  ".mp3")
         elif message.audio.mime_type == "audio/x-opus+ogg":
             await state.update_data(audio_sample_file_extensions =  ".ogg")
