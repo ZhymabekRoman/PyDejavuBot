@@ -52,10 +52,9 @@ class Upload_Queries(StatesGroup):
     upload_query_step_3 = State()
     
 class get_path:
-    def __init__(self, user_id):
+    def __init__(self, user_id, user_folder = get_selected_folder_name(self.user_id)):
         self.user_id = user_id
-        self.select_user_folder = get_selected_folder_name(self.user_id)
-        #self.user_folder = get_selected_folder_name(self.user_id)
+        self.select_user_folder = user_folder
     def tmp_audio_samples(self, file = ""):
         return f'data/audio_samples/tmp/{self.user_id}/{self.select_user_folder}/{file}'
     def non_normalized_audio_samples(self, file = ""):
@@ -288,7 +287,7 @@ async def quiz_mode_step_1(message: types.Message):
 @dp.message_handler(state = Upload_Queries.upload_query_step_1, content_types=types.ContentTypes.VOICE)
 async def quiz_mode_step_2(message: types.Message, state: FSMContext):
     file_id = message.voice.file_id
-    path_list = get_path(message.chat.id)
+    path_list = get_path(message.chat.id, get_selected_folder_name(message.chat.id))
     if message.voice.mime_type == "audio/mpeg":
         audio_sample_file_extensions =  ".mp3"
     elif message.voice.mime_type == "audio/ogg":
@@ -401,9 +400,7 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
         await message.reply('Название папки "{}" содержит недопустимые символы: {}'.format(user_data['folder_name'], check_name_for_except_chars(user_data['folder_name'])))
         return 
     
-    set_selected_folder_name(message.chat.id, user_data['folder_name'])
-    path_list = get_path(message.chat.id)
-    
+    path_list = get_path(message.chat.id, user_data['folder_name'])
     os.makedirs(path_list.tmp_audio_samples())
     os.makedirs(path_list.non_normalized_audio_samples())
     os.makedirs(path_list.normalized_audio_samples())
@@ -454,7 +451,7 @@ async def f_delete_folder_step_1(message):
 
 @dp.callback_query_handler(lambda c: c.data == 'process_to_delete_folder')
 async def f_delete_folder_step_2(callback_query: types.CallbackQuery):
-    path_list = get_path(callback_query.message.chat.id)
+    path_list = get_path(callback_query.message.chat.id, get_selected_folder_name(callback_query.message.chat.id))
     shutil.rmtree(path_list.tmp_audio_samples())
     shutil.rmtree(path_list.non_normalized_audio_samples())
     shutil.rmtree(path_list.normalized_audio_samples())
@@ -565,7 +562,7 @@ async def f_remove_audio_samples_step_1(message):
 async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContext):
     await state.update_data(chosen_sample=message.text)
     user_data = await state.get_data()
-    path_list = get_path(message.chat.id)
+    path_list = get_path(message.chat.id, get_selected_folder_name(message.chat.id))
     if user_data['chosen_sample'] == "<<< Отмена >>>":
         logging.info("<<< Отмена >>>")
         await message.reply("Вы отменили операцию", reply_markup=types.ReplyKeyboardRemove())
