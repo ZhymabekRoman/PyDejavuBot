@@ -52,7 +52,7 @@ class Upload_Queries(StatesGroup):
     upload_query_step_3 = State()
     
 class get_path:
-    def __init__(self, user_id, user_folder):
+    def __init__(self, user_id, user_folder = get_selected_folder_name(self.user_id)):
         self.user_id = user_id
         self.select_user_folder = user_folder
     def tmp_audio_samples(self, file = ""):
@@ -115,7 +115,42 @@ def check_name_for_except_chars(string):
     exception_chars = '\\\/\|<>\?:"\*'
     find_exceptions = re.compile('([{}])'.format(exception_chars))
     return find_exceptions.findall(string)
+##EndRegion ### END backends section ###
+#######################
+async def u_upload_audio_sample(message, file_id, file_name, file_extension):
+    path_list = get_path(message.chat.id)
+
+    managment_msg = await message.reply('Загрузка файла... Подождите...')
+    await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_audio_samples(file_name + file_extension))
+    managment_msg = await managment_msg.edit_text("Загрузка файла... Готово ✅")
     
+    # Stage 1 : check audio files for integrity and convert them
+    ffmpeg_status, managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_audio_samples(file_name + file_extension), path_list.non_normalized_audio_samples(file_name + ".mp3"))
+    if ffmpeg_status is False:
+        await f_folder_list(message, 'start') 
+        return
+    
+    # Stage 2 : mormalize audio
+    ffmpeg_normalizing_status, managment_msg = await normalize_audio(managment_msg, path_list.non_normalized_audio_samples(file_name + ".mp3"), path_list.normalized_audio_samples(file_name + ".mp3"))
+    if ffmpeg_normalizing_status is False:
+        await f_folder_list(message, 'start') 
+        return
+    
+    # Stage 3 : register current audio sample hashes
+    audfprint_status, managment_msg = await analyze_audio_sample(managment_msg, path_list.normalized_audio_samples(file_name + ".mp3"), path_list.fingerprint_db())
+    if audfprint_status is False:
+        await f_folder_list(message, 'start') 
+        return
+        
+    db_worker = SQLighter(config.database_name)
+    db_worker.register_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), file_name, file_id)
+    db_worker.close()
+    
+    await message.reply(f'Файл с названием {file_name} успешно сохранён')
+
+#######################
+
+##################################### U  T  I  L  S #######################################
 async def check_audio_integrity_and_convert(message, input_file, output_file):
     message_text = message.text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
     await message.edit_text(message_text + " Выполняем...")
@@ -195,8 +230,8 @@ async def delete_audio_hashes(fingerprint_db, sample_name):
     args = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name, '-H', '4']; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate()
+##################################### U  T  I  L  S #######################################
 
-##EndRegion ### END backends section ###
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
     if get_user_data(message.chat.id) is None:
@@ -477,11 +512,11 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
 async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContext):
     await state.update_data(audio_sample_name=message.text)
     user_data = await state.get_data()
+
     file_id = user_data["audio_sample_file_info"].file_id
-    audio_sample_name = f'{user_data["audio_sample_name"]}'
-    audio_sample_full_name = f'{user_data["audio_sample_name"]}{user_data["audio_sample_file_extensions"]}'
-    path_list = get_path(message.chat.id, get_selected_folder_name(message.chat.id))
-    
+    file_name =  user_data["audio_sample_name"]
+    file_extension = user_data["audio_sample_file_extensions"]
+
     if len(str(user_data["audio_sample_name"])) >= 50:
         await message.reply('Название файла превышает 50 символов')
         return
@@ -494,40 +529,21 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         if str(user_data["audio_sample_name"]).lower() == str(x).lower():
             await message.reply("Данная запись уже существует, введите другое имя : ")
             return
-     
-    managment_msg = await message.reply('Загрузка файла... Подождите...')
-    await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_audio_samples(audio_sample_full_name)); await asyncio.sleep(1)
-    managment_msg = await managment_msg.edit_text("Загрузка файла... Готово ✅")
     
-    # Stage 1 : check audio files for integrity and convert them
-    ffmpeg_status, managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_audio_samples(audio_sample_full_name), path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"))
-    if ffmpeg_status is False:
-        #os.remove(out_file) ### TODO Remove trash files 
-        await state.finish()
-        await f_folder_list(message, 'start') 
-        return
-    
-    # Stage 2 : mormalize audio
-    ffmpeg_normalizing_status, managment_msg = await normalize_audio(managment_msg, path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"), path_list.normalized_audio_samples(audio_sample_name + ".mp3"))
-    if ffmpeg_normalizing_status is False:
-        await state.finish()
-        await f_folder_list(message, 'start') 
-        return
-    
-    # Stage 3 : register current audio sample hashes
-    audfprint_status, managment_msg = await analyze_audio_sample(managment_msg, path_list.normalized_audio_samples(audio_sample_name + ".mp3"), path_list.fingerprint_db())
-    if audfprint_status is False:
-        await state.finish()
-        await f_folder_list(message, 'start') 
-        return
-        
-    db_worker = SQLighter(config.database_name)
-    db_worker.register_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data["audio_sample_name"], file_id)
-    db_worker.close()
-    
-    await message.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
+    def start_upload_audio_sample(message, file_id, file_name, file_extension):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        loop.run_until_complete(u_upload_audio_sample(message, file_id, file_name, file_extension))
+        loop.close()
+
+    x = threading.Thread(target=start_upload_audio_sample, args=(message, file_id, file_name, file_extension,))
+    x.start()
+
     await state.finish()
     await f_folder_list(message, 'start')
+    
+###############################################################
 
 @dp.message_handler(state= Remove_Simples.remove_audio_samples_step_1)
 async def f_remove_audio_samples_step_1(message):
