@@ -50,7 +50,7 @@ class Upload_Queries(StatesGroup):
     upload_query_step_1 = State()
     upload_query_step_2 = State()
     upload_query_step_3 = State()
-    
+
 class get_path:
     def __init__(self, user_id, user_folder):
         self.user_id = user_id
@@ -71,7 +71,7 @@ class get_path:
         return f'data/query_samples/non_normalized/{self.user_id}/{self.select_user_folder}/{file_name}'
     def normalized_query_audio(self, file_name=""):
         return f'data/query_samples/normalized/{self.user_id}/{self.select_user_folder}/{file_name}'
-        
+ 
 def b_get_text_in_lang(data):
 	lang_type = "En"
 	dict_miltilang = {
@@ -135,12 +135,12 @@ async def check_audio_integrity_and_convert(message, input_file, output_file):
 
 async def normalize_audio(message, input_file, output_file):
     message_text = message.text + "\n\nНормализуем аудио..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
+    await message.edit_text(message_text + " Выполняем...")
     args = ['ffmpeg-normalize', '-q', input_file, '-c:a', 'libmp3lame', '-o', output_file]; print(args)
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate()
     if data[1] == "":
-        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode=types.ParseMode.MARKDOWN)
+        managment_msg = await message.edit_text(message_text + " Готово ✅")
         return True, managment_msg
     else:
         message_text += "\nОбнаружены ошибки:\n" + code(f"{data[1]}\n") 
@@ -158,58 +158,46 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
     elif os.path.exists(fingerprint_db) is True:
         db_hashes_add_method = 'add'
     if config.audfprint_mode == '0':
-        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '500', '-X', '-F', '80']; print(args)
+        cmd = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '500', '-X', '-F', '80']
     elif config.audfprint_mode == '1':
-        args = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file]; print(args)
-    process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
-    data = process.communicate()
-    if data[1] == "":
-        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode=types.ParseMode.MARKDOWN)
-        return True, managment_msg
-    else:
-        message_text += "\nОбнаружены ошибки:\n" + code(f"{data[1]}\n") 
-        managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
-        return True, managment_msg
+        cmd = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file]
+    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await proc.communicate()
+    print(f'[{cmd!r} exited with {proc.returncode}]')
+    if stdout:
+        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + code(f"{stdout.decode()}\n") 
+        print(f'[stdout]\n{stdout.decode()}')
+    if stderr:
+        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + code(f"{stderr.decode()}\n")
+        print(f'[stderr]\n{stderr.decode()}')
+    managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode=types.ParseMode.MARKDOWN)
+    return True, managment_msg
 
 async def match_audio_query(message, input_file, fingerprint_db):
     message_text = message.text + "\n\nИщем аудио хэши в базе данных..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
+    await message.edit_text(message_text + " Выполняем...")
     if config.audfprint_mode == '0':
-        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '500', '-D', '2000', '-X', '-F', '80']; print(args)
+        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '500', '-D', '2000', '-X', '-F', '80']
     elif config.audfprint_mode == '1':
-        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]; print(args)
+        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]
     process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
     data = process.communicate(); print(data)
-    try:
-        file = open("out.txt", "r")
-        out = file.read()
-        file.close()
-        os.remove("out.txt")
-    except:
-        out = "Error"
-
+    file = open("out.txt", "r")
+    out = file.read()
+    file.close()
     message_text += " Готово ✅\n\nРезультат:\n" + code("{}\n".format(out))
     managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
-        
+
 async def delete_audio_hashes(fingerprint_db, sample_name):
-    cmd = f'python3 library/audfprint-master/audfprint.py remove -d {fingerprint_db} {sample_name} -H 4'
-    proc = await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+    cmd = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name, '-H', '2']
+    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
     if stdout:
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
         print(f'[stderr]\n{stderr.decode()}')
-        
-async def run():
-    proc = await asyncio.create_subprocess_shell('apt', stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await proc.communicate()
-    print(f'[{args!r} exited with {proc.returncode}]')
-    if stdout:
-        print(f'[stdout]\n{stdout.decode()}')
-    if stderr:
-        print(f'[stderr]\n{stderr.decode()}')
-        
+
 ##EndRegion ### END backends section ###
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
@@ -255,7 +243,8 @@ async def quiz_mode_step_0(message: types.Message):
     keyboard_markup.row(back_btn)
     await message.edit_text("Выберите папку : ", reply_markup=keyboard_markup)   
     await Create_Folders.create_new_folder_step_2.set()
-
+    
+#@dp.message_handler(state = Upload_Queries.upload_query_step_2)
 async def quiz_mode_step_1(message: types.Message):
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
@@ -273,7 +262,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         audio_sample_file_extensions =  ".ogg"
     else:
         audio_sample_file_extensions =  "NULL"
-    random_nums = randint(100000, 999999)
+    random_nums = randint(1000, 9999)
     query_audio_full_name= f"{random_nums}{audio_sample_file_extensions}"
     query_audio_name = f"{random_nums}"
     if audio_sample_file_extensions in ('.mp3', '.ogg'):
@@ -284,7 +273,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         # Stage 1 : check audio files for integrity and convert them
         ffmpeg_status, managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_query_audio(query_audio_full_name), path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
         if ffmpeg_status is False:
-            os.remove(path_list.tmp_query_audio(query_audio_full_name))
+            #os.remove(out_file) ### TODO Remove trash files 
             await state.finish()
             await f_folder_list(message, 'start') 
             return
@@ -292,18 +281,12 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         # Stage 2 : mormalize audio
         ffmpeg_normalizing_status, managment_msg = await normalize_audio(managment_msg, path_list.non_normalized_query_audio(query_audio_name + ".mp3"), path_list.normalized_query_audio(query_audio_name + ".mp3"))
         if ffmpeg_normalizing_status is False:
-            os.remove(path_list.tmp_query_audio(query_audio_full_name))
-            os.remove(path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
             await state.finish()
             await f_folder_list(message, 'start') 
             return
             
         await match_audio_query(managment_msg, path_list.normalized_query_audio(query_audio_name + ".mp3"), path_list.fingerprint_db())
         
-        os.remove(path_list.tmp_query_audio(query_audio_full_name))
-        os.remove(path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
-        os.remove(path_list.normalized_query_audio(query_audio_name + ".mp3"))
-
         await state.finish()
         await f_folder_list(message, 'start') 
     else:
