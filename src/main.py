@@ -192,10 +192,24 @@ async def match_audio_query(message, input_file, fingerprint_db):
     managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
         
 async def delete_audio_hashes(fingerprint_db, sample_name):
-    args = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name, '-H', '4']; print(args)
-    process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
-    data = process.communicate()
-
+    cmd = f'python3 library/audfprint-master/audfprint.py remove -d {fingerprint_db} {sample_name} -H 4'
+    proc = await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await proc.communicate()
+    print(f'[{cmd!r} exited with {proc.returncode}]')
+    if stdout:
+        print(f'[stdout]\n{stdout.decode()}')
+    if stderr:
+        print(f'[stderr]\n{stderr.decode()}')
+        
+async def run():
+    proc = await asyncio.create_subprocess_shell('apt', stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await proc.communicate()
+    print(f'[{args!r} exited with {proc.returncode}]')
+    if stdout:
+        print(f'[stdout]\n{stdout.decode()}')
+    if stderr:
+        print(f'[stderr]\n{stderr.decode()}')
+        
 ##EndRegion ### END backends section ###
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
