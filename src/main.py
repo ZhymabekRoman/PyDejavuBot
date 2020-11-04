@@ -18,7 +18,7 @@ from aiogram.dispatcher import FSMContext # for using FSM
 import os
 import os.path # need for extract extions of file
 import shutil
-import subprocess
+#import subprocess
 import sys
 from random import randint
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -118,37 +118,43 @@ def check_name_for_except_chars(string):
     
 async def check_audio_integrity_and_convert(message, input_file, output_file):
     message_text = message.text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
-    await message.edit_text(message_text + " Выполняем...")
-    args = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-i', input_file, output_file]; print(args)
-    process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
-    data = process.communicate()
-    if data[1] == "":
-        managment_msg = await message.edit_text(message_text + " Готово ✅")
-        return True, managment_msg
-    else:
-        message_text += "\nОбнаружены ошибки ffmpeg:\n" + code(f"{data[1]}\n") 
-        managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
-        if os.path.exists(output_file) is False:
-            managment_msg = await message.edit_text(message_text + text("Критическая ошибка, файл отсутсвует, выходим..."), parse_mode=types.ParseMode.MARKDOWN)
-            return False, managment_msg
-        return True, managment_msg
+    await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
+    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-i', input_file, output_file]
+    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await proc.communicate()
+    print(f'[{cmd!r} exited with {proc.returncode}]')
+    message_text += " Готово ✅"
+    if stdout:
+        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + code(f"{stdout.decode()}\n") 
+        print(f'[stdout]\n{stdout.decode()}')
+    if stderr:
+        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + code(f"{stderr.decode()}\n")
+        print(f'[stderr]\n{stderr.decode()}')
+    if os.path.exists(output_file) is False:
+        managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode=types.ParseMode.MARKDOWN)
+        return False, managment_msg
+    managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
+    return True, managment_msg
 
 async def normalize_audio(message, input_file, output_file):
     message_text = message.text + "\n\nНормализуем аудио..."
-    await message.edit_text(message_text + " Выполняем...")
-    args = ['ffmpeg-normalize', '-q', input_file, '-c:a', 'libmp3lame', '-o', output_file]; print(args)
-    process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
-    data = process.communicate()
-    if data[1] == "":
-        managment_msg = await message.edit_text(message_text + " Готово ✅")
-        return True, managment_msg
-    else:
-        message_text += "\nОбнаружены ошибки:\n" + code(f"{data[1]}\n") 
-        managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
-        if os.path.exists(output_file) is False:
-            managment_msg = await message.edit_text(message_text + text("Критическая ошибка, файл отсутсвует, выходим..."), parse_mode=types.ParseMode.MARKDOWN)
-            return False, managment_msg
-        return True, managment_msg
+    await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
+    cmd = ['ffmpeg-normalize', '-q', input_file, '-c:a', 'libmp3lame', '-o', output_file]
+    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await proc.communicate()
+    print(f'[{cmd!r} exited with {proc.returncode}]')
+    message_text += " Готово ✅"
+    if stdout:
+        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + code(f"{stdout.decode()}\n") 
+        print(f'[stdout]\n{stdout.decode()}')
+    if stderr:
+        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + code(f"{stderr.decode()}\n")
+        print(f'[stderr]\n{stderr.decode()}')
+    if os.path.exists(output_file) is False:
+        managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode=types.ParseMode.MARKDOWN)
+        return False, managment_msg
+    managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
+    return True, managment_msg
 
 async def analyze_audio_sample(message, input_file, fingerprint_db):
     message_text = message.text + "\n\nРегистрируем аудио хэшов в базу данных..."
@@ -164,28 +170,27 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
+    message_text += " Готово ✅"
     if stdout:
         message_text += "\nОбнаружены ошибки в stdout потоке:\n" + code(f"{stdout.decode()}\n") 
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
         message_text += "\nОбнаружены ошибки в stderr потоке:\n" + code(f"{stderr.decode()}\n")
         print(f'[stderr]\n{stderr.decode()}')
-    managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode=types.ParseMode.MARKDOWN)
+    managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
     return True, managment_msg
 
 async def match_audio_query(message, input_file, fingerprint_db):
     message_text = message.text + "\n\nИщем аудио хэши в базе данных..."
-    await message.edit_text(message_text + " Выполняем...")
+    await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
     if config.audfprint_mode == '0':
-        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '500', '-D', '2000', '-X', '-F', '80']
+        cmd = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '500', '-D', '2000', '-X', '-F', '80']
     elif config.audfprint_mode == '1':
-        args = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]
-    process = subprocess.Popen(args, stdout=subprocess.PIPE,  stderr=subprocess.PIPE, encoding='utf-8')
-    data = process.communicate(); print(data)
-    file = open("out.txt", "r")
-    out = file.read()
-    file.close()
-    message_text += " Готово ✅\n\nРезультат:\n" + code("{}\n".format(out))
+        cmd = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]
+    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await proc.communicate()
+    print(f'[{cmd!r} exited with {proc.returncode}]')
+    message_text += " Готово ✅\n\nРезультат:\n" + code("{}\n".format(stdout))
     managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
 
 async def delete_audio_hashes(fingerprint_db, sample_name):
@@ -267,7 +272,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
     query_audio_name = f"{random_nums}"
     if audio_sample_file_extensions in ('.mp3', '.ogg'):
         managment_msg = await message.reply('Загрузка файла... Подождите...')
-        await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_query_audio(query_audio_full_name)); await asyncio.sleep(1)
+        await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_query_audio(query_audio_full_name))
         managment_msg = await managment_msg.edit_text("Загрузка файла... Готово ✅")
         
         # Stage 1 : check audio files for integrity and convert them
@@ -493,7 +498,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
             return
      
     managment_msg = await message.reply('Загрузка файла... Подождите...')
-    await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_audio_samples(audio_sample_full_name)); await asyncio.sleep(1)
+    await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_audio_samples(audio_sample_full_name))
     managment_msg = await managment_msg.edit_text("Загрузка файла... Готово ✅")
     
     # Stage 1 : check audio files for integrity and convert them
