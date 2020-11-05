@@ -464,6 +464,16 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         else:
             await state.update_data(audio_sample_file_extensions =  "NULL")
     user_data = await state.get_data()
+    
+    file_unique_id = user_data["audio_sample_file_info"].file_unique_id
+    db_worker = SQLighter(config.database_name)
+    dict_values = db_worker.select_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]
+    db_worker.close()
+    for d_file_name, d_file_id in dict_values.items():
+        if d_file_id == file_unique_id:
+            await message.reply(f'Этот файл уже загружен под названием {d_file_name}')
+            return
+    
     if user_data["audio_sample_file_extensions"] in ('.wav', '.mp3', '.wma', '.ogg'):
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
@@ -482,14 +492,6 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     audio_sample_name = f'{user_data["audio_sample_name"]}'
     audio_sample_full_name = f'{user_data["audio_sample_name"]}{user_data["audio_sample_file_extensions"]}'
     path_list = get_path(message.chat.id, get_selected_folder_name(message.chat.id))
-    
-    db_worker = SQLighter(config.database_name)
-    dict_values = db_worker.select_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]
-    db_worker.close()
-    for d_file_name, d_file_id in dict_values.items():
-        if d_file_id == file_id:
-            await message.reply(f'Этот файл уже загружен под названием {d_file_name}')
-            return
             
     if len(str(user_data["audio_sample_name"])) >= 50:
         await message.reply('Название файла превышает 50 символов')
@@ -529,7 +531,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         return
         
     db_worker = SQLighter(config.database_name)
-    db_worker.register_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data["audio_sample_name"], file_id)
+    db_worker.register_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data["audio_sample_name"], user_data["audio_sample_file_info"].file_unique_id)
     db_worker.close()
     
     await message.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
