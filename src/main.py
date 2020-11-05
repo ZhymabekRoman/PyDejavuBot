@@ -483,6 +483,14 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     audio_sample_full_name = f'{user_data["audio_sample_name"]}{user_data["audio_sample_file_extensions"]}'
     path_list = get_path(message.chat.id, get_selected_folder_name(message.chat.id))
     
+    db_worker = SQLighter(config.database_name)
+    dict_values = db_worker.select_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]
+    db_worker.close()
+    for d_file_name, d_file_id in dict_values.items():
+        if d_file_id == file_id:
+            await message.reply(f'Этот файл уже загружен под названием {d_file_name}')
+            return
+            
     if len(str(user_data["audio_sample_name"])) >= 50:
         await message.reply('Название файла превышает 50 символов')
         return
@@ -561,6 +569,9 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         return
     await message.reply(f"Сэмпл {user_data['chosen_sample']} в процесе удаления ...", reply_markup=types.ReplyKeyboardRemove()) 
     await delete_audio_hashes(path_list.fingerprint_db(), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+    os.remove(path_list.tmp_audio_samples(user_data['chosen_sample'] + ".mp3"))
+    os.remove(path_list.non_normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+    os.remove(path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
     await message.reply(f"Сэмпл {user_data['chosen_sample']} успешно удален.")
     await f_folder_list(message, 'start') 
     
