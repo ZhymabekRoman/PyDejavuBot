@@ -190,7 +190,7 @@ async def match_audio_query(message, input_file, fingerprint_db):
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
-    message_text += " Готово ✅\n\nРезультат:\n" + code("{}\n".format(stdout))
+    message_text += " Готово ✅\n\nРезультат:\n" + code(f"{stdout.decode()}\n"))
     managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
 
 async def delete_audio_hashes(fingerprint_db, sample_name):
