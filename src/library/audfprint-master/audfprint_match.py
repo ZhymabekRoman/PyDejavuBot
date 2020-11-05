@@ -397,9 +397,9 @@ class Matcher(object):
             nhashaligned = 0
             print("No match")
 
-            file = open("out.txt", "w")
-            file.write("No match")
-            file.close()
+#            file = open("out.txt", "w")
+#            file.write("No match")
+#            file.close()
             
             if self.verbose:
                 msgrslt.append("NOMATCH " + qrymsg)
@@ -412,11 +412,10 @@ class Matcher(object):
                 query_audio_full_path = ht.names[tophitid]
                 query_audio_basename = ntpath.basename(query_audio_full_path)
                 filename, file_extension = os.path.splitext(query_audio_basename)
-
                 print(filename)
-                file = open("out.txt", "w")
-                file.write(filename)
-                file.close()
+#                file = open("out.txt", "w")
+#                file.write(filename)
+#                file.close()
                # figure the number of raw and aligne
                 if self.verbose:
                     if self.find_time_range:

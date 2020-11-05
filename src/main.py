@@ -18,7 +18,6 @@ from aiogram.dispatcher import FSMContext # for using FSM
 import os
 import os.path # need for extract extions of file
 import shutil
-#import subprocess
 import sys
 from random import randint
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -353,6 +352,7 @@ async def f_create_new_folder_step_1(message: types.Message):
 async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     await state.update_data(folder_name=message.text)
     user_data = await state.get_data()
+    await state.finish()
     
     if len(user_data['folder_name']) >=  10:
         await message.reply('Название папки превышает 10 символов')
@@ -383,7 +383,6 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     db_worker.close()
     await message.reply(f"Папка {user_data['folder_name']} создана!")
     await f_folder_list(message, 'start') 
-    await state.finish()
         
 async def manage_folder(message, folder_name):
     set_selected_folder_name(message.chat.id, folder_name)
@@ -497,6 +496,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
             await message.reply("Данная запись уже существует, введите другое имя : ")
             return
      
+    await state.finish()
     managment_msg = await message.reply('Загрузка файла... Подождите...')
     await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_audio_samples(audio_sample_full_name))
     managment_msg = await managment_msg.edit_text("Загрузка файла... Готово ✅")
@@ -505,21 +505,18 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     ffmpeg_status, managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_audio_samples(audio_sample_full_name), path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"))
     if ffmpeg_status is False:
         #os.remove(out_file) ### TODO Remove trash files 
-        await state.finish()
         await f_folder_list(message, 'start') 
         return
     
     # Stage 2 : mormalize audio
     ffmpeg_normalizing_status, managment_msg = await normalize_audio(managment_msg, path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"), path_list.normalized_audio_samples(audio_sample_name + ".mp3"))
     if ffmpeg_normalizing_status is False:
-        await state.finish()
         await f_folder_list(message, 'start') 
         return
     
     # Stage 3 : register current audio sample hashes
     audfprint_status, managment_msg = await analyze_audio_sample(managment_msg, path_list.normalized_audio_samples(audio_sample_name + ".mp3"), path_list.fingerprint_db())
     if audfprint_status is False:
-        await state.finish()
         await f_folder_list(message, 'start') 
         return
         
@@ -528,7 +525,6 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     db_worker.close()
     
     await message.reply(f'Файл с названием {user_data["audio_sample_name"]} успешно сохранён')
-    await state.finish()
     await f_folder_list(message, 'start')
 
 @dp.message_handler(state= Remove_Simples.remove_audio_samples_step_1)
@@ -548,11 +544,11 @@ async def f_remove_audio_samples_step_1(message):
 async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContext):
     await state.update_data(chosen_sample=message.text)
     user_data = await state.get_data()
+    await state.finish()
     path_list = get_path(message.chat.id, get_selected_folder_name(message.chat.id))
     if user_data['chosen_sample'] == "<<< Отмена >>>":
         logging.info("<<< Отмена >>>")
         await message.reply("Вы отменили операцию", reply_markup=types.ReplyKeyboardRemove())
-        await state.finish()
         await f_folder_list(message, 'start') 
         return 
     try:
@@ -561,13 +557,11 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         db_worker.close()
     except KeyError:
         await message.reply("Такого аудио сэмпла нету. Выходим ...", reply_markup=types.ReplyKeyboardRemove())
-        await state.finish()
         await f_folder_list(message, 'start') 
         return
     await message.reply(f"Сэмпл {user_data['chosen_sample']} в процесе удаления ...", reply_markup=types.ReplyKeyboardRemove()) 
     await delete_audio_hashes(path_list.fingerprint_db(), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
     await message.reply(f"Сэмпл {user_data['chosen_sample']} успешно удален.")
-    await state.finish()
     await f_folder_list(message, 'start') 
     
 @dp.message_handler(lambda message: message.text == "Отмена")
