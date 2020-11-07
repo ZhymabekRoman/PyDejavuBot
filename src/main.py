@@ -28,8 +28,8 @@ API_TOKEN = config.API_TOKEN # Initalialization API token for work with Telegram
 #ConfigureMemoryStorage
 memory_storage = MemoryStorage()
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.DEBUG) 
+#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG) 
 
 # Initialize bot and dispatcher
 bot = Bot(token=API_TOKEN)
@@ -118,7 +118,7 @@ def check_name_for_except_chars(string):
 async def check_audio_integrity_and_convert(message, input_file, output_file):
     message_text = message.text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
     await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
-    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-i', input_file, output_file]
+    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-i', input_file,'-vn', output_file]
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
