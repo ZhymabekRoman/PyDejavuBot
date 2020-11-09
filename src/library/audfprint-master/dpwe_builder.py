@@ -59,9 +59,8 @@ config = ConfigParser(defaults)
 section = 'dpwe_builder'
 config.add_section(section)
 
-if config_file:
-    if len(config.read(config_file)) == 0:
-        raise IOError(errno.ENOENT, "Cannot read config file", config_file)
+if config_file and len(config.read(config_file)) == 0:
+    raise IOError(errno.ENOENT, "Cannot read config file", config_file)
 
 density = config.getint(section, 'density')
 fanout = config.getint(section, 'fanout')

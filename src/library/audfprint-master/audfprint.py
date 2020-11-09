@@ -53,14 +53,13 @@ def filename_list_iterator(filelist, wavdir, wavext, listflag):
 # for saving precomputed fprints
 def ensure_dir(dirname):
     """ ensure that the named directory exists """
-    if len(dirname):
-        if not os.path.exists(dirname):
-            # There's a race condition for multiprocessor; don't worry if the
-            # directory gets created before we get to it.
-            try:
-                os.makedirs(dirname)
-            except:
-                pass
+    if len(dirname) and not os.path.exists(dirname):
+        # There's a race condition for multiprocessor; don't worry if the
+        # directory gets created before we get to it.
+        try:
+            os.makedirs(dirname)
+        except:
+            pass
 
 
 # Command line interface
@@ -82,8 +81,14 @@ def file_precompute_peaks_or_hashes(analyzer, filename, precompdir,
     # Form the output filename to check if it exists.
     # strip relative directory components from file name
     # Also remove leading absolute path (comp == '')
-    relname = '/'.join([comp for comp in tail_filename.split('/')
-                        if comp != '.' and comp != '..' and comp != ''])
+    relname = '/'.join(
+        [
+            comp
+            for comp in tail_filename.split('/')
+            if comp not in ['.', '..', '']
+        ]
+    )
+
     root = os.path.splitext(relname)[0]
     if precompext is None:
         if hashes_not_peaks:
@@ -148,7 +153,7 @@ def do_cmd(cmd, analyzer, hash_tab, filename_iter, matcher, outdir, type, report
     """ Breaks out the core part of running the command.
         This is just the single-core versions.
     """
-    if cmd == 'merge' or cmd == 'newmerge':
+    if cmd in ['merge', 'newmerge']:
         # files are other hash tables, merge them in
         for filename in filename_iter:
             hash_tab2 = hash_table.HashTable(filename)
@@ -170,17 +175,14 @@ def do_cmd(cmd, analyzer, hash_tab, filename_iter, matcher, outdir, type, report
             msgs = matcher.file_match_to_msgs(analyzer, hash_tab, filename, num)
             report(msgs)
 
-    elif cmd == 'new' or cmd == 'add':
+    elif cmd in ['new', 'add']:
         # Adding files
         tothashes = 0
-        ix = 0
-        for filename in filename_iter:
+        for ix, filename in enumerate(filename_iter):
             report([time.ctime() + " ingesting #" + str(ix) + ": "
                     + filename + " ..."])
             dur, nhash = analyzer.ingest(hash_tab, filename)
             tothashes += nhash
-            ix += 1
-
         report(["Added " + str(tothashes) + " hashes "
                 + "(%.1f" % (tothashes / float(analyzer.soundfiletotaldur))
                 + " hashes/sec)"])
@@ -266,7 +268,7 @@ def do_cmd_multiproc(cmd, analyzer, hash_tab, filename_iter, matcher,
         for msgs in msgslist:
             report(msgs)
 
-    elif cmd == 'new' or cmd == 'add':
+    elif cmd in ['new', 'add']:
         # We add by forking multiple parallel threads each running
         # analyzers over different subsets of the file list
         multiproc_add(analyzer, hash_tab, filename_iter, report, ncores)

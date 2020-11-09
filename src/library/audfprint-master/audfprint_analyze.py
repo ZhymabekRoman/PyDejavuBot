@@ -404,10 +404,8 @@ class Analyzer(object):
             # Did we get returned a list of lists of peaks due to shift?
             if isinstance(peaks[0], list):
                 peaklists = peaks
-                query_hashes = []
-                for peaklist in peaklists:
-                    query_hashes.append(landmarks2hashes(
-                        self.peaks2landmarks(peaklist)))
+                query_hashes = [landmarks2hashes(
+                        self.peaks2landmarks(peaklist)) for peaklist in peaklists]
                 query_hashes = np.concatenate(query_hashes)
             else:
                 query_hashes = landmarks2hashes(self.peaks2landmarks(peaks))
@@ -421,7 +419,7 @@ class Analyzer(object):
                 (unique_hash_hash & ((1 << 32) - 1))[:, np.newaxis]
             ]).astype(np.int32)
             hashes = unique_hashes
-            # Or simply np.unique(query_hashes, axis=0) for numpy >= 1.13
+                # Or simply np.unique(query_hashes, axis=0) for numpy >= 1.13
 
         # print("wavfile2hashes: read", len(hashes), "hashes from", filename)
         return hashes

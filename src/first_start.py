@@ -26,9 +26,8 @@ conn.commit()
 tlgrm_bot_api = input("Укажите API токен бота: ")
 audfprint_mode = input("Выберите качество (0) или скорость (1): ")
 
-file = open("config.py", "w")
-file.write(f"API_TOKEN = '{tlgrm_bot_api}'" + '\n')
-file.write(f"database_name = '{db_name}.db'" + '\n')
-file.write(f"audfprint_mode = '{audfprint_mode}'")
-file.close()
+with open("config.py", "w") as file:
+    file.write(f"API_TOKEN = '{tlgrm_bot_api}'" + '\n')
+    file.write(f"database_name = '{db_name}.db'" + '\n')
+    file.write(f"audfprint_mode = '{audfprint_mode}'")
 print("Готово !!!")
