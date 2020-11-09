@@ -305,7 +305,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
             
         await match_audio_query(managment_msg, path_list.normalized_query_audio(query_audio_name + ".mp3"), path_list.fingerprint_db())
         
-        os.remove(tmp_query_audio(query_audio_full_name))
+        os.remove(path_list.tmp_query_audio(query_audio_full_name))
         os.remove(path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
         os.remove(path_list.normalized_query_audio(query_audio_name + ".mp3"))
         
