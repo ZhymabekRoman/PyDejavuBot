@@ -70,15 +70,15 @@ def audio_read(filename, sr=None, channels=None):
 
 def audio_read_ffmpeg(filename, sr=None, channels=None):
     """Read a soundfile, return (d, sr)."""
-    # Hacked version of librosa.load and audioread/ff.
-    offset = 0.0
     duration = None
     dtype = np.float32
     y = []
     with FFmpegAudioFile(os.path.realpath(filename),
-                         sample_rate=sr, channels=channels) as input_file:
+                             sample_rate=sr, channels=channels) as input_file:
         sr = input_file.sample_rate
         channels = input_file.channels
+        # Hacked version of librosa.load and audioread/ff.
+        offset = 0.0
         s_start = int(np.floor(sr * offset) * channels)
         if duration is None:
             s_end = np.inf
@@ -287,10 +287,7 @@ class FFmpegAudioFile(object):
         """
         # Sample rate.
         match = re.search(r'(\d+) hz', s)
-        if match:
-            self.sample_rate_orig = int(match.group(1))
-        else:
-            self.sample_rate_orig = 0
+        self.sample_rate_orig = int(match.group(1)) if match else 0
         if self.sample_rate is None:
             self.sample_rate = self.sample_rate_orig
 
@@ -302,10 +299,7 @@ class FFmpegAudioFile(object):
                 self.channels_orig = 2
             else:
                 match = re.match(r'(\d+) ', mode)
-                if match:
-                    self.channels_orig = int(match.group(1))
-                else:
-                    self.channels_orig = 1
+                self.channels_orig = int(match.group(1)) if match else 1
         else:
             self.channels_orig = 0
         if self.channels is None:

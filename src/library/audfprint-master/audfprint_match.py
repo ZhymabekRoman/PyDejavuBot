@@ -40,7 +40,6 @@ def process_info():
 
 
 def log(message):
-    pass
     """ log info with stats """
     #print('%s physmem=%s utime=%s %s' % (time.ctime(), process_info()))
 
@@ -168,9 +167,8 @@ class Matcher(object):
         matchhasheshash = np.unique(allotimes[matchix]
                                     + (allhashes[matchix] << timebits))
         timemask = (1 << timebits) - 1
-        matchhashes = np.c_[matchhasheshash & timemask,
+        return np.c_[matchhasheshash & timemask,
                             matchhasheshash >> timebits]
-        return matchhashes
 
     def _calculate_time_ranges(self, hits, id, mode):
         """Given the id and mode, return the actual time support.

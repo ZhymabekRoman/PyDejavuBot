@@ -183,10 +183,7 @@ class HashTable(object):
         if params:
             for key in params:
                 self.params[key] = params[key]
-        if file_object:
-            f = file_object
-        else:
-            f = gzip.open(name, 'wb')
+        f = file_object or gzip.open(name, 'wb')
         pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
         self.dirty = False
         nhashes = sum(self.counts)
@@ -212,10 +209,7 @@ class HashTable(object):
 
     def load_pkl(self, name, file_object=None):
         """ Read hash table values from pickle file <name>. """
-        if file_object:
-            f = file_object
-        else:
-            f = gzip.open(name, 'rb')
+        f = file_object or gzip.open(name, 'rb')
         temp = pickle.load(f, **pickle_options)
         if temp.ht_version < HT_OLD_COMPAT_VERSION:
             raise ValueError('Version of ' + name + ' is ' + str(temp.ht_version)
@@ -262,8 +256,7 @@ class HashTable(object):
                 target sampling rate from Matlab file (must be 11025)
         """
         mht = scipy.io.loadmat(name)
-        params = {}
-        params['mat_version'] = mht['HT_params'][0][0][-1][0][0]
+        params = {'mat_version': mht['HT_params'][0][0][-1][0][0]}
         assert params['mat_version'] >= 0.9
         self.hashbits = _bitsfor(mht['HT_params'][0][0][0][0][0])
         self.depth = mht['HT_params'][0][0][1][0][0]
