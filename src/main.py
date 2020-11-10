@@ -408,8 +408,8 @@ async def f_upload_audio_samples_step_1(message):
 async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContext):
     await state.update_data(audio_sample_message=message)
     await state.update_data(audio_sample_content_type=message.content_type)
-    file_unique_id = user_data["audio_sample_file_info"].file_unique_id
     user_data = await state.get_data()
+    file_unique_id = user_data["audio_sample_file_info"].file_unique_id
     
     if user_data["audio_sample_content_type"] == "document":
         await state.update_data(audio_sample_file_info=message.document)
