@@ -409,15 +409,14 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
     await state.update_data(audio_sample_message=message)
     await state.update_data(audio_sample_content_type=message.content_type)
     user_data = await state.get_data()
-    file_unique_id = user_data["audio_sample_file_info"].file_unique_id
-    
+
     if user_data["audio_sample_content_type"] == "document":
-        await state.update_data(audio_sample_file_info=message.document)
+        await state.update_data(audio_sample_file_info=user_data["audio_sample_message"].document)
         name_file = user_data["audio_sample_message"].document.file_name
         await state.update_data(audio_sample_file_extensions =  os.path.splitext(name_file)[1])
     elif user_data["audio_sample_content_type"] == "audio":
         ### New in Bot API 5.0
-        await state.update_data(audio_sample_file_info=message.audio)
+        await state.update_data(audio_sample_file_info=user_data["audio_sample_message"].audio)
         name_file = user_data["audio_sample_message"].audio.file_name
         await state.update_data(audio_sample_file_extensions =  os.path.splitext(name_file)[1])
         
@@ -432,6 +431,8 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         return
         
     ### Проверка на загруженность файла в текущей папки через db
+    file_unique_id = user_data["audio_sample_file_info"].file_unique_id
+
     db_worker = SQLighter(config.database_name)
     dict_values = db_worker.select_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]
     db_worker.close()
