@@ -206,7 +206,7 @@ async def delete_audio_hashes(message, fingerprint_db, sample_name):
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
         print(f'[stderr]\n{stderr.decode()}')
-    await message.reply(message.text + f' Сэмпл "{sample_name}" успешно удален!')
+    await message.reply('Сэмпл успешно удален!')
 ##EndRegion ### END backends section ###
 
 @dp.message_handler(commands=['start'], state='*')
@@ -609,7 +609,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         os.remove(path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
         os.remove(path_list.normalized_query_audio(query_audio_name + ".mp3"))
         
-        await manage_folder(message, get_selected_folder_name(message.chat.id))
+        await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
     else:
         await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
         return
