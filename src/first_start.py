@@ -19,7 +19,7 @@ if os.path.isfile(f"{db_name}.db") is True:
 conn = sqlite3.connect(f"{db_name}.db")
 cur = conn.cursor()
 
-cur.execute("CREATE TABLE  IF NOT EXISTS  users(user_id TEXT, lang TEXT, projects TEXT)")
+cur.execute("CREATE TABLE  IF NOT EXISTS  users(user_id TEXT, lang TEXT, folders TEXT)")
 conn.commit()
 
 # Step 2 :config init

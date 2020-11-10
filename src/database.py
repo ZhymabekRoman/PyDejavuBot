@@ -20,11 +20,11 @@ class SQLighter:
     
     def select_user_folders_list(self, user_id):
         with self.connection:
-            return json.loads((self.cursor.execute("SELECT projects FROM users Where user_id= :0", {'0': user_id}).fetchone())[0])
+            return json.loads((self.cursor.execute("SELECT folders FROM users Where user_id= :0", {'0': user_id}).fetchone())[0])
     
     def select_user_folders_count(self, user_id):
         with self.connection:
-            out =  json.loads((self.cursor.execute("SELECT projects FROM users Where user_id= :0", {'0': user_id}).fetchone())[0])
+            out =  json.loads((self.cursor.execute("SELECT folders FROM users Where user_id= :0", {'0': user_id}).fetchone())[0])
             return len(out)
     
     def create_folder(self, user_id, folder_name):
@@ -36,7 +36,7 @@ class SQLighter:
             ### Мерджуем два словаря : новый и старый
             data_to_add = merge_two_dicts(folders_list, new_folder)
             ### Коммитим, предварительно упаковав в json : )
-            self.cursor.execute("UPDATE users SET projects =  :0 WHERE User_id = :1", {'0': json.dumps(data_to_add), '1': user_id})
+            self.cursor.execute("UPDATE users SET folders =  :0 WHERE User_id = :1", {'0': json.dumps(data_to_add), '1': user_id})
 
     def delete_folder(self, user_id, folder_name):
         with self.connection:
@@ -45,7 +45,7 @@ class SQLighter:
             ### Удаляем папку от туда
             del folders_list[folder_name]
             ### Коммитим !
-            self.cursor.execute("UPDATE users SET projects =  :0 WHERE user_id = :1", {'0': json.dumps(folders_list), '1': user_id})
+            self.cursor.execute("UPDATE users SET folders =  :0 WHERE user_id = :1", {'0': json.dumps(folders_list), '1': user_id})
 
     def create_empety_user_data(self, user_id):
         with self.connection:
@@ -72,7 +72,7 @@ class SQLighter:
             folders_list = self.select_user_folders_list(user_id)
             folders_list[folder_name] = curent_folder_samples
             ### Коммитим !
-            self.cursor.execute("UPDATE users SET projects =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
+            self.cursor.execute("UPDATE users SET folders =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
             
     def unregister_audio_sample(self, user_id, folder_name, sample_name):
         with self.connection:
@@ -85,7 +85,7 @@ class SQLighter:
             folders_list = self.select_user_folders_list(user_id)
             folders_list[folder_name] =folder_samples
             ### Коммитим !
-            self.cursor.execute("UPDATE users SET projects =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
+            self.cursor.execute("UPDATE users SET folders =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
             
     def unregister_all_audio_sample(self, user_id, folder_name):
         with self.connection:
@@ -95,7 +95,7 @@ class SQLighter:
             folders_list = self.select_user_folders_list(user_id)
             folders_list[folder_name] = {}
             ### Коммитим !
-            self.cursor.execute("UPDATE users SET projects =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
+            self.cursor.execute("UPDATE users SET folders =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
             
     def close(self):
         """ Закрываем текущее соединение с БД """
