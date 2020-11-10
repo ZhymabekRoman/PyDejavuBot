@@ -206,7 +206,7 @@ async def delete_audio_hashes(message, fingerprint_db, sample_name):
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
         print(f'[stderr]\n{stderr.decode()}')
-    await message.edit_text(message.text + " Готово ✅", reply_markup=types.ReplyKeyboardRemove())
+    await message.reply(message.text + f' Сэмпл "{sample_name}" успешно удален!')
 ##EndRegion ### END backends section ###
 
 @dp.message_handler(commands=['start'], state='*')
@@ -518,7 +518,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     db_worker.close()
     
     await message.reply(f'Аудио сэмпл с названием "{user_data["audio_sample_name"]}" успешно сохранён')
-    await f_folder_list(message, 'start')
+    await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
 
 @dp.message_handler(state= Remove_Simples.remove_audio_samples_step_1)
 async def f_remove_audio_samples_step_1(message):
@@ -542,7 +542,7 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
     if user_data['chosen_sample'] == "<<< Отмена >>>":
         logging.info("<<< Отмена >>>")
         await message.reply("Вы отменили операцию", reply_markup=types.ReplyKeyboardRemove())
-        await f_folder_list(message, 'start') 
+        await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
         return 
     try:
         db_worker = SQLighter(config.database_name)
@@ -550,13 +550,13 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         db_worker.close()
     except KeyError:
         await message.reply("Такого аудио сэмпла нету. Выходим ...", reply_markup=types.ReplyKeyboardRemove())
-        await f_folder_list(message, 'start') 
+        await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
         return
-    managment_msg = await message.reply(f"Сэмпл {user_data['chosen_sample']} в процесе удаления ...", reply_markup=types.ReplyKeyboardRemove()) 
-    await delete_audio_hashes(managment_msg, path_list.fingerprint_db(), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+    await message.reply(f"Сэмпл {user_data['chosen_sample']} в процесе удаления ...", reply_markup=types.ReplyKeyboardRemove()) 
+    await delete_audio_hashes(message, path_list.fingerprint_db(), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
     os.remove(path_list.non_normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
     os.remove(path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
-    await f_folder_list(message, 'start') 
+    await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
     
 
 async def quiz_mode_step_1(message: types.Message, back_btn = "folder_manager"):
