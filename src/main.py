@@ -206,7 +206,7 @@ async def delete_audio_hashes(message, fingerprint_db, sample_name):
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
         print(f'[stderr]\n{stderr.decode()}')
-    await message.edit_text(message.text + " Готово ✅", parse_mode=types.ParseMode.MARKDOWN)
+    await message.edit_text(message.text + " Готово ✅", reply_markup=types.ReplyKeyboardRemove())
 ##EndRegion ### END backends section ###
 
 @dp.message_handler(commands=['start'], state='*')
@@ -342,8 +342,8 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     db_worker.close()
     await message.reply(f"Папка {user_data['folder_name']} создана!")
     await f_folder_list(message, 'start') 
-        
-async def manage_folder(message, folder_name):
+
+async def manage_folder(message, folder_name, type_start = "edit"):
     set_selected_folder_name(message.chat.id, folder_name)
     
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -361,8 +361,13 @@ async def manage_folder(message, folder_name):
     samples_name = ""
     for i, b in enumerate(get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)], 1):
         samples_name += str(f"{i}) {b}\n")
-    
-    await message.edit_text("Вы работаете с папкой : " + str(get_selected_folder_name(message.chat.id)) + "\n" + "\n" + 
+
+    if type_start == "edit":
+        await message.edit_text("Вы работаете с папкой : " + str(get_selected_folder_name(message.chat.id)) + "\n" + "\n" + 
+                        "Список аудио сэмлов : \n" + samples_name
+                        + "\n"+ "Ваши действия - ", reply_markup=keyboard_markup)
+    elif type_start == "start":
+        await message.answer("Вы работаете с папкой : " + str(get_selected_folder_name(message.chat.id)) + "\n" + "\n" + 
                         "Список аудио сэмлов : \n" + samples_name
                         + "\n"+ "Ваши действия - ", reply_markup=keyboard_markup)
 
