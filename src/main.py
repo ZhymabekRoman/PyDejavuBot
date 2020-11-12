@@ -11,7 +11,7 @@ import config
 import logging
 import asyncio
 from aiogram.utils.exceptions import BotBlocked
-from aiogram.utils.markdown import text, bold, italic, code, pre
+import aiogram.utils.markdown as fmt
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext # for using FSM
@@ -90,11 +90,11 @@ curent_folder_name = {}
 
 def get_selected_folder_name(user_id):
     global curent_folder_name
-    return curent_folder_name[user_id]
+    return str(curent_folder_name[user_id])
 
 def set_selected_folder_name(user_id, set_name):
     global curent_folder_name
-    curent_folder_name[user_id] = set_name
+    curent_folder_name[user_id] = str(set_name)
     
 ##Region ### START backends section ###
 def get_user_folders_list(user_id):
@@ -123,16 +123,16 @@ def check_name_for_except_chars(string):
 async def check_audio_integrity_and_convert(message, input_file, output_file):
     message_text = message.text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
     await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
-    cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-i', input_file,'-vn', output_file]
+    cmd = ['ffmpeg', '-nostdin','-hide_banner', '-loglevel', 'warning', '-i', input_file,'-vn', output_file]
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
     message_text += " Готово ✅"
     if stdout:
-        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + code(f"{stdout.decode()}\n") 
+        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + fmt.code(f"{stdout.decode()}\n") 
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
-        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + code(f"{stderr.decode()}\n")
+        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + fmt.code(f"{stderr.decode()}\n")
         print(f'[stderr]\n{stderr.decode()}')
     if os.path.exists(output_file) is False:
         managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode=types.ParseMode.MARKDOWN)
@@ -149,10 +149,10 @@ async def normalize_audio(message, input_file, output_file):
     print(f'[{cmd!r} exited with {proc.returncode}]')
     message_text += " Готово ✅"
     if stdout:
-        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + code(f"{stdout.decode()}\n") 
+        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + fmt.code(f"{stdout.decode()}\n") 
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
-        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + code(f"{stderr.decode()}\n")
+        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + fmt.code(f"{stderr.decode()}\n")
         print(f'[stderr]\n{stderr.decode()}')
     if os.path.exists(output_file) is False:
         managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode=types.ParseMode.MARKDOWN)
@@ -176,13 +176,12 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
     print(f'[{cmd!r} exited with {proc.returncode}]')
     message_text += " Готово ✅"
     if stdout:
-        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + code(f"{stdout.decode()}\n") 
+        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + fmt.code(f"{stdout.decode()}\n") 
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
-        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + code(f"{stderr.decode()}\n")
+        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + fmt.code(f"{stderr.decode()}\n")
         print(f'[stderr]\n{stderr.decode()}')
-    managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
-    #return managment_msg
+    await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
 
 async def match_audio_query(message, input_file, fingerprint_db):
     message_text = message.text + "\n\nИщем аудио хэши в базе данных..."
@@ -194,7 +193,7 @@ async def match_audio_query(message, input_file, fingerprint_db):
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
-    message_text += f" Готово ✅\n\nРезультат:\n{code(stdout.decode())}\n"
+    message_text += f" Готово ✅\n\nРезультат:\n{fmt.code(stdout.decode())}\n"
     await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
 
 async def delete_audio_hashes(message, fingerprint_db, sample_name):
@@ -238,17 +237,17 @@ async def about_bot(callback_query: types.CallbackQuery):
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
     keyboard_markup.row(back_btn)
-    text = """ LenDejavuBot - бот предназначенный для решения музыкальных викторин. Бот специально разработан для Павлодарского музыкального колледжа\n
-Разработчик ботка : @Zhymabek_Roman
-Тех.поддержка : @Zhymabek_Roman"""
-    await callback_query.message.edit_text(text, reply_markup=keyboard_markup)
+    await callback_query.message.edit_text(
+        "LenDejavuBot - бот предназначенный для решения музыкальных викторин. Бот специально разработан для Павлодарского музыкального колледжа\n\n"
+        "Разработчик ботка : @Zhymabek_Roman\n"
+        "Тех.поддержка : @Zhymabek_Roman", 
+        reply_markup=keyboard_markup)
     
 async def quiz_mode_step_0(message: types.Message):
     keyboard_markup = types.InlineKeyboardMarkup()
     for folder_name in get_user_folders_list(message.chat.id):
         get_sample_count = len(get_user_folders_list(message.chat.id)[folder_name])
-        callback_constr = "set_" + folder_name
-        folder_btn = types.InlineKeyboardButton(f"{folder_name} ({get_sample_count})", callback_data= callback_constr)
+        folder_btn = types.InlineKeyboardButton(f"{folder_name} ({get_sample_count})", callback_data = "set_" + folder_name)
         keyboard_markup.row(folder_btn)
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
     keyboard_markup.row(back_btn)
@@ -282,6 +281,7 @@ async def f_set_lang(message : types.Message, type_start= 'start' ):
 
 async def f_folder_list(message : types.Message, type_start):
     set_selected_folder_name(message.chat.id, "")
+    
     keyboard_markup = types.InlineKeyboardMarkup()
     create_new_folder_btn = types.InlineKeyboardButton('Создать новую папку 🗂', callback_data= 'create_new_folder')
     keyboard_markup.row(create_new_folder_btn)
@@ -293,6 +293,7 @@ async def f_folder_list(message : types.Message, type_start):
  
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
     keyboard_markup.row(back_btn)
+    
     if type_start == 'start':
         await message.answer("Менеджер папок\n\nОбщее количество папок: {0}".format(get_user_folders_count(message.chat.id)), reply_markup=keyboard_markup)
     elif type_start == 'edit':
@@ -312,20 +313,30 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     user_data = await state.get_data()
     
     if len(user_data['folder_name']) >=  20:
-        await message.reply('Название папки превышает 20 символов')
+        keyboard_markup = types.InlineKeyboardMarkup()
+        back_btn = types.InlineKeyboardButton('«      ', callback_data = 'folders_list')
+        keyboard_markup.row(back_btn)
+        await message.reply('Название папки превышает 20 символов', reply_markup=keyboard_markup)
         return
         
     for x in get_user_folders_list(message.chat.id):
         if x.lower() == user_data['folder_name'].lower():
-            await message.reply('Данная папка уже существует! Введите другое имя')
+            keyboard_markup = types.InlineKeyboardMarkup()
+            back_btn = types.InlineKeyboardButton('«      ', callback_data = 'folders_list')
+            keyboard_markup.row(back_btn)
+            await message.reply('Данная папка уже существует! Введите другое имя', reply_markup=keyboard_markup)
             return
 
     if check_name_for_except_chars(user_data['folder_name']):
-        await message.reply('Название папки "{}" содержит недопустимые символы: {}'.format(user_data['folder_name'], check_name_for_except_chars(user_data['folder_name'])))
+        keyboard_markup = types.InlineKeyboardMarkup()
+        back_btn = types.InlineKeyboardButton('«      ', callback_data = 'folders_list')
+        keyboard_markup.row(back_btn)
+        await message.reply(f"Название папки '{user_data['folder_name']}' содержит недопустимые символы: {check_name_for_except_chars(user_data['folder_name'])}", reply_markup=keyboard_markup)
         return 
     
     await state.finish()
     set_selected_folder_name(message.chat.id, user_data['folder_name'])
+    
     path_list = get_path(message.chat.id)
     os.makedirs(path_list.tmp_audio_samples())
     os.makedirs(path_list.non_normalized_audio_samples())
@@ -337,9 +348,11 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
         os.makedirs(path_list.fingerprint_db_dir_path())
     except:
         pass
+    
     db_worker = SQLighter(config.database_name)
     db_worker.create_folder(message.chat.id, user_data['folder_name'])
     db_worker.close()
+    
     await message.reply(f"Папка {user_data['folder_name']} создана!")
     await f_folder_list(message, 'start') 
 
@@ -361,15 +374,23 @@ async def manage_folder(message, folder_name, type_start = "edit"):
     samples_name = ""
     for i, b in enumerate(get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)], 1):
         samples_name += str(f"{i}) {b}\n")
-
+        
+    get_sample_count = len(get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)])
+    
     if type_start == "edit":
-        await message.edit_text("Вы работаете с папкой : " + str(get_selected_folder_name(message.chat.id)) + "\n" + "\n" + 
-                        "Список аудио сэмлов : \n" + samples_name
-                        + "\n"+ "Ваши действия - ", reply_markup=keyboard_markup)
+        await message.edit_text(
+                        f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\n\n"
+                        f"Количество аудио сэмплов: {get_sample_count}\n"
+                        f"Список аудио сэмлов :\n{samples_name}\n"
+                        "Ваши действия - ", 
+                        reply_markup=keyboard_markup)
     elif type_start == "start":
-        await message.answer("Вы работаете с папкой : " + str(get_selected_folder_name(message.chat.id)) + "\n" + "\n" + 
-                        "Список аудио сэмлов : \n" + samples_name
-                        + "\n"+ "Ваши действия - ", reply_markup=keyboard_markup)
+        await message.answer(
+                        f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\n\n"
+                        f"Количество аудио сэмплов: {get_sample_count}\n"
+                        f"Список аудио сэмлов :\n{samples_name}\n"
+                        "Ваши действия - ", 
+                        reply_markup=keyboard_markup)
 
 async def f_delete_folder_step_1(message):
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -377,7 +398,11 @@ async def f_delete_folder_step_1(message):
     back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
     keyboard_markup.row(delete_btn)
     keyboard_markup.row(back_btn)
-    await message.edit_text(f"Вы действительно хотите удалить папку {get_selected_folder_name(message.chat.id)}?\nЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ!", reply_markup=keyboard_markup)
+    await message.edit_text(
+                    f"Вы действительно хотите удалить папку {get_selected_folder_name(message.chat.id)}?\n"
+                    f"Также будут удалены ВСЕ аудио сэмплы, которые находятся в папке {get_selected_folder_name(message.chat.id)}.\n\n"
+                    "ВНИМАНИЕ! ЭТО ДЕЙСТВИЕ НЕЛЬЗЯ ОТМЕНИТЬ !!!", 
+                    reply_markup=keyboard_markup)
 
 @dp.callback_query_handler(lambda c: c.data == 'process_to_delete_folder')
 async def f_delete_folder_step_2(callback_query: types.CallbackQuery):
@@ -437,13 +462,12 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         
     ### Проверка на загруженность файла в текущей папки через db
     file_unique_id = user_data["audio_sample_file_info"].file_unique_id
-
-    db_worker = SQLighter(config.database_name)
-    dict_values = db_worker.select_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]
-    db_worker.close()
-    for d_file_name, d_file_id in dict_values.items():
+    for d_file_name, d_file_id in get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]:
         if d_file_id == file_unique_id:
-            await message.reply(f'Этот файл уже существует в этой папке под названием {code(d_file_name)}\nОтправьте другой файл', parse_mode=types.ParseMode.MARKDOWN)
+            keyboard_markup = types.InlineKeyboardMarkup()
+            back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+            keyboard_markup.row(back_btn)
+            await message.reply(f'В папке "{get_selected_folder_name(message.chat.id)}" этот аудио сэмпл уже существует под названием "{fmt.code(d_file_name)}"\nОтправьте другой файл', parse_mode=types.ParseMode.MARKDOWN, reply_markup=keyboard_markup)
             return
      
     if user_data["audio_sample_file_extensions"].lower() in ('.wav', '.mp3', '.wma', '.ogg', '.flac'):
@@ -477,19 +501,29 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     path_list = get_path(message.chat.id)
             
     if len(str(user_data["audio_sample_name"])) >= 50:
-        await message.reply('Название сэмпла превышает 50 символов')
+        keyboard_markup = types.InlineKeyboardMarkup()
+        back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+        keyboard_markup.row(back_btn)
+        await message.reply('Название сэмпла превышает 50 символов', reply_markup=keyboard_markup)
         return
     
     if check_name_for_except_chars(user_data["audio_sample_name"]):
-        await message.reply(f'Название сэмпла "{user_data["audio_sample_name"]}" содержит недопустимые символы: {check_name_for_except_chars(audio_sample_name)}')
+        keyboard_markup = types.InlineKeyboardMarkup()
+        back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+        keyboard_markup.row(back_btn)
+        await message.reply(f'Название сэмпла "{user_data["audio_sample_name"]}" содержит недопустимые символы: {check_name_for_except_chars(audio_sample_name)}', reply_markup=keyboard_markup)
         return 
     
     for x in get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]:
         if str(user_data["audio_sample_name"]).lower() == str(x).lower():
-            await message.reply("Данное название аудио сэмпла уже существует, введите другое имя : ")
+            keyboard_markup = types.InlineKeyboardMarkup()
+            back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+            keyboard_markup.row(back_btn)
+            await message.reply("Данное название аудио сэмпла уже существует, введите другое имя : ", reply_markup=keyboard_markup)
             return
      
     await state.finish()
+    
     managment_msg = await message.reply('Загрузка файла... Подождите...')
     await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_audio_samples(audio_sample_full_name))
     managment_msg = await managment_msg.edit_text("Загрузка файла... Готово ✅")
@@ -614,19 +648,19 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
         return
 
-@dp.message_handler(lambda message: message.text == "Отмена")
-async def action_cancel(message: types.Message):
-    remove_keyboard = types.ReplyKeyboardRemove()
-    await message.answer("Действие отменено. Введите /start, чтобы начать заново.", reply_markup=remove_keyboard)
+#@dp.message_handler(lambda message: message.text == "Отмена")
+#async def action_cancel(message: types.Message):
+#    remove_keyboard = types.ReplyKeyboardRemove()
+#    await message.answer("Действие отменено. Введите /start, чтобы начать заново.", reply_markup=remove_keyboard)
 
 @dp.message_handler(commands=['help'])
 async def process_help_command(message: types.Message):
     await message.reply("Напиши мне что-нибудь, и я отпрпавлю этот текст тебе в ответ!")
 
-@dp.message_handler(commands=['stop'])
-async def stop(message: types.Message):
-    await message.reply("Бот остановлен!")
-    sys.exit()
+#@dp.message_handler(commands=['stop'])
+#async def stop(message: types.Message):
+#    await message.reply("Бот остановлен!")
+#    sys.exit()
     
 @dp.errors_handler(exception=BotBlocked)
 async def error_bot_blocked(update: types.Update, exception: BotBlocked):
@@ -690,8 +724,8 @@ async def callback_handler(query: types.CallbackQuery, state):
         await quiz_mode_step_0(query.message)
     if answer_data == 'quiz_mode_1':
         if len(get_user_folders_list(query.message.chat.id)[get_selected_folder_name(query.message.chat.id)]) == 0:
-                await query.answer(f'В папке "{get_selected_folder_name(query.message.chat.id)}" нету аудио сэмлов', True)
-                return
+            await query.answer(f'В папке "{get_selected_folder_name(query.message.chat.id)}" нету аудио сэмлов', True)
+            return
         await query.answer()
         await quiz_mode_step_1(query.message)
     for w in get_user_folders_list(query.message.chat.id):
