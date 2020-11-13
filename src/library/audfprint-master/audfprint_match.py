@@ -393,12 +393,7 @@ class Matcher(object):
         if len(rslts) == 0:
             # No matches returned at all
             nhashaligned = 0
-            print("No match")
-
-#            file = open("out.txt", "w")
-#            file.write("No match")
-#            file.close()
-            
+            print("Не найдено :(")
             if self.verbose:
                 msgrslt.append("NOMATCH " + qrymsg)
             else:
@@ -411,10 +406,6 @@ class Matcher(object):
                 query_audio_basename = ntpath.basename(query_audio_full_path)
                 filename, file_extension = os.path.splitext(query_audio_basename)
                 print(filename)
-#                file = open("out.txt", "w")
-#                file.write(filename)
-#                file.close()
-               # figure the number of raw and aligne
                 if self.verbose:
                     if self.find_time_range:
                         msg = ("Matched {:6.1f} s starting at {:6.1f} s in {:s}"

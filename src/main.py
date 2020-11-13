@@ -10,18 +10,17 @@ import re
 import config
 import logging
 import asyncio
-from aiogram.utils.exceptions import BotBlocked
 import aiogram.utils.markdown as fmt
+from aiogram.utils.exceptions import BotBlocked
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.dispatcher import FSMContext # for using FSM
+from aiogram.dispatcher import FSMContext
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 import os
-import os.path # need for extract extions of file
 import shutil
 import sys
 import random
 import string
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
 ##EndRegion ### END imports section ###
 
 API_TOKEN = config.API_TOKEN # Initalialization API token for work with Telegram Bot
@@ -295,9 +294,9 @@ async def f_folder_list(message : types.Message, type_start):
     keyboard_markup.row(back_btn)
     
     if type_start == 'start':
-        await message.answer("Менеджер папок\n\nОбщее количество папок: {0}".format(get_user_folders_count(message.chat.id)), reply_markup=keyboard_markup)
+        await message.answer(f"Менеджер папок\n\nОбщее количество папок: {get_user_folders_count(message.chat.id)}", reply_markup=keyboard_markup)
     elif type_start == 'edit':
-        await message.edit_text("Менеджер папок\n\nОбщее количество папок: {0}".format(get_user_folders_count(message.chat.id)), reply_markup=keyboard_markup)
+        await message.edit_text(f"Менеджер папок\n\nОбщее количество папок: {get_user_folders_count(message.chat.id)}", reply_markup=keyboard_markup)
     
 @dp.message_handler(state = Create_Folders.create_new_folder_step_1, content_types=types.ContentTypes.TEXT)
 async def f_create_new_folder_step_1(message: types.Message):
@@ -331,7 +330,7 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data = 'folders_list')
         keyboard_markup.row(back_btn)
-        await message.reply(f"Название папки '{user_data['folder_name']}' содержит недопустимые символы: {check_name_for_except_chars(user_data['folder_name'])}", reply_markup=keyboard_markup)
+        await message.reply(f'Название папки "{user_data["folder_name"]}" содержит недопустимые символы: {check_name_for_except_chars(user_data["folder_name"])}', reply_markup=keyboard_markup)
         return 
     
     await state.finish()
@@ -353,7 +352,7 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
     db_worker.create_folder(message.chat.id, user_data['folder_name'])
     db_worker.close()
     
-    await message.reply(f"Папка {user_data['folder_name']} создана!")
+    await message.reply(f'Папка "{user_data["folder_name"]}" создана!')
     await f_folder_list(message, 'start') 
 
 async def manage_folder(message, folder_name, type_start = "edit"):
@@ -423,7 +422,7 @@ async def f_delete_folder_step_2(callback_query: types.CallbackQuery):
     db_worker.delete_folder(callback_query.message.chat.id, get_selected_folder_name(callback_query.message.chat.id))
     db_worker.close()
 
-    await callback_query.message.edit_text(f"Папка {get_selected_folder_name(callback_query.message.chat.id)} удалена!")
+    await callback_query.message.edit_text(f'Папка "{get_selected_folder_name(callback_query.message.chat.id)}" удалена!')
     await f_folder_list(callback_query.message, 'start')
     
 @dp.message_handler(state = Upload_Simples.upload_audio_samples_step_1)
@@ -431,7 +430,7 @@ async def f_upload_audio_samples_step_1(message):
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
     keyboard_markup.row(back_btn)
-    await message.edit_text(f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\nЖду от тебя аудио сэмплы", reply_markup=keyboard_markup)
+    await message.edit_text(f'Вы работаете с папкой : "{get_selected_folder_name(message.chat.id)}"\nЖду от тебя аудио сэмплы', reply_markup=keyboard_markup)
     await Upload_Simples.upload_audio_samples_step_2.set()
 
 @dp.message_handler(state = Upload_Simples.upload_audio_samples_step_2, content_types=types.ContentTypes.DOCUMENT | types.ContentTypes.AUDIO)
@@ -467,7 +466,7 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
             keyboard_markup = types.InlineKeyboardMarkup()
             back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
             keyboard_markup.row(back_btn)
-            await message.reply(f'В папке "{get_selected_folder_name(message.chat.id)}" этот аудио сэмпл уже существует под названием "{fmt.code(d_file_name)}"\nОтправьте другой файл', parse_mode=types.ParseMode.MARKDOWN, reply_markup=keyboard_markup)
+            await message.reply(f'В папке "{get_selected_folder_name(message.chat.id)}" этот аудио сэмпл уже существует под названием "{d_file_name}"\nОтправьте другой файл', parse_mode=types.ParseMode.MARKDOWN, reply_markup=keyboard_markup)
             return
      
     if user_data["audio_sample_file_extensions"].lower() in ('.wav', '.mp3', '.wma', '.ogg', '.flac'):
@@ -502,14 +501,14 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
             
     if len(str(user_data["audio_sample_name"])) >= 50:
         keyboard_markup = types.InlineKeyboardMarkup()
-        back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+        back_btn = types.InlineKeyboardButton('«      ', callback_data = get_selected_folder_name(message.chat.id))
         keyboard_markup.row(back_btn)
         await message.reply('Название сэмпла превышает 50 символов', reply_markup=keyboard_markup)
         return
     
     if check_name_for_except_chars(user_data["audio_sample_name"]):
         keyboard_markup = types.InlineKeyboardMarkup()
-        back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+        back_btn = types.InlineKeyboardButton('«      ', callback_data = get_selected_folder_name(message.chat.id))
         keyboard_markup.row(back_btn)
         await message.reply(f'Название сэмпла "{user_data["audio_sample_name"]}" содержит недопустимые символы: {check_name_for_except_chars(audio_sample_name)}', reply_markup=keyboard_markup)
         return 
@@ -517,7 +516,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     for x in get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]:
         if str(user_data["audio_sample_name"]).lower() == str(x).lower():
             keyboard_markup = types.InlineKeyboardMarkup()
-            back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+            back_btn = types.InlineKeyboardButton('«      ', callback_data = get_selected_folder_name(message.chat.id))
             keyboard_markup.row(back_btn)
             await message.reply("Данное название аудио сэмпла уже существует, введите другое имя : ", reply_markup=keyboard_markup)
             return
@@ -573,11 +572,13 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
     user_data = await state.get_data()
     await state.finish()
     path_list = get_path(message.chat.id)
+
     if user_data['chosen_sample'] == "<<< Отмена >>>":
         logging.info("<<< Отмена >>>")
         await message.reply("Вы отменили операцию", reply_markup=types.ReplyKeyboardRemove())
         await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
         return 
+
     try:
         db_worker = SQLighter(config.database_name)
         db_worker.unregister_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data['chosen_sample'])
@@ -586,10 +587,13 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         await message.reply("Такого аудио сэмпла нету. Выходим ...", reply_markup=types.ReplyKeyboardRemove())
         await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
         return
+
     await message.reply(f"Сэмпл {user_data['chosen_sample']} в процесе удаления ...", reply_markup=types.ReplyKeyboardRemove()) 
     await delete_audio_hashes(message, path_list.fingerprint_db(), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+
     os.remove(path_list.non_normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
     os.remove(path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+
     await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
     
 
