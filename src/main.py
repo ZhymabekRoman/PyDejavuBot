@@ -462,7 +462,7 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         
     ### Проверка на загруженность файла в текущей папки через db
     file_unique_id = user_data["audio_sample_file_info"].file_unique_id
-    for d_file_name, d_file_id in get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]:
+    for d_file_name, d_file_id in get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)].items():
         if d_file_id == file_unique_id:
             keyboard_markup = types.InlineKeyboardMarkup()
             back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
