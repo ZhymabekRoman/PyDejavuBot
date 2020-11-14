@@ -502,11 +502,11 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     audio_sample_full_name = f'{user_data["audio_sample_name"]}{user_data["audio_sample_file_extensions"]}'
     path_list = get_path(message.chat.id)
             
-    if len(str(user_data["audio_sample_name"])) >= 50:
+    if len(str(user_data["audio_sample_name"])) >= 90:
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data = get_selected_folder_name(message.chat.id))
         keyboard_markup.row(back_btn)
-        await message.reply('Название сэмпла превышает 50 символов, введите другое имя', reply_markup=keyboard_markup)
+        await message.reply('Название сэмпла превышает 90 символов, введите другое имя', reply_markup=keyboard_markup)
         return
     
     if check_name_for_except_chars(user_data["audio_sample_name"]):
