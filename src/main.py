@@ -122,18 +122,16 @@ def check_name_for_except_chars(string):
 async def check_audio_integrity_and_convert(message, input_file, output_file):
     message_text = message.html_text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
     await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
-    cmd = ['ffmpeg', '-nostdin','-hide_banner', '-loglevel', 'warning', '-i', input_file,'-vn', output_file]
+    cmd = ['ffmpeg', '-nostdin','-hide_banner', '-loglevel', 'panic', '-i', input_file,'-vn', output_file]
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
     message_text += " Готово ✅"
     if stdout:
-        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + f"<code>{stdout.decode()}</code>\n"
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
-        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + f"<code>{stderr.decode()}</code>\n"
         print(f'[stderr]\n{stderr.decode()}')
-    if os.path.exists(output_file) is False:
+    if os.path.exists(output_file) is False or proc.returncode == 1:
         managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode="HTML")
         return False, managment_msg
     managment_msg = await message.edit_text(message_text, parse_mode="HTML")
@@ -148,12 +146,10 @@ async def normalize_audio(message, input_file, output_file):
     print(f'[{cmd!r} exited with {proc.returncode}]')
     message_text += " Готово ✅"
     if stdout:
-        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + f"<code>{stdout.decode()}</code>\n"
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
-        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + f"<code>{stderr.decode()}</code>\n"
         print(f'[stderr]\n{stderr.decode()}')
-    if os.path.exists(output_file) is False:
+    if os.path.exists(output_file) is False or proc.returncode == 1:
         managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode="HTML")
         return False, managment_msg
     managment_msg = await message.edit_text(message_text, parse_mode="HTML")
@@ -175,10 +171,8 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
     print(f'[{cmd!r} exited with {proc.returncode}]')
     message_text += " Готово ✅"
     if stdout:
-        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + f"<code>{stdout.decode()}</code>\n"
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
-        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + f"<code>{stderr.decode()}</code>\n"
         print(f'[stderr]\n{stderr.decode()}')
     await message.edit_text(message_text, parse_mode="HTML")
 
