@@ -120,48 +120,48 @@ def check_name_for_except_chars(string):
     return find_exceptions.findall(string)
     
 async def check_audio_integrity_and_convert(message, input_file, output_file):
-    message_text = message.text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
+    message_text = message.html_text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
     cmd = ['ffmpeg', '-nostdin','-hide_banner', '-loglevel', 'warning', '-i', input_file,'-vn', output_file]
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
     message_text += " Готово ✅"
     if stdout:
-        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + fmt.code(f"{stdout.decode()}\n") 
+        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + f"<code>{stdout.decode()}</code>\n"
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
-        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + fmt.code(f"{stderr.decode()}\n")
+        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + f"<code>{stderr.decode()}</code>\n"
         print(f'[stderr]\n{stderr.decode()}')
     if os.path.exists(output_file) is False:
-        managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode=types.ParseMode.MARKDOWN)
+        managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode="HTML")
         return False, managment_msg
-    managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
+    managment_msg = await message.edit_text(message_text, parse_mode="HTML")
     return True, managment_msg
 
 async def normalize_audio(message, input_file, output_file):
-    message_text = message.text + "\n\nНормализуем аудио..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
+    message_text = message.html_text + "\n\nНормализуем аудио..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
     cmd = ['ffmpeg-normalize', '-q', input_file, '-c:a', 'libmp3lame', '-o', output_file]
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
     message_text += " Готово ✅"
     if stdout:
-        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + fmt.code(f"{stdout.decode()}\n") 
+        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + f"<code>{stdout.decode()}</code>\n"
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
-        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + fmt.code(f"{stderr.decode()}\n")
+        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + f"<code>{stderr.decode()}</code>\n"
         print(f'[stderr]\n{stderr.decode()}')
     if os.path.exists(output_file) is False:
-        managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode=types.ParseMode.MARKDOWN)
+        managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode="HTML")
         return False, managment_msg
-    managment_msg = await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
+    managment_msg = await message.edit_text(message_text, parse_mode="HTML")
     return True, managment_msg
 
 async def analyze_audio_sample(message, input_file, fingerprint_db):
-    message_text = message.text + "\n\nРегистрируем аудио хэшов в базу данных..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
+    message_text = message.html_text + "\n\nРегистрируем аудио хэшов в базу данных..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
     if os.path.exists(fingerprint_db) is False:
         db_hashes_add_method = 'new'
     elif os.path.exists(fingerprint_db) is True:
@@ -175,16 +175,16 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
     print(f'[{cmd!r} exited with {proc.returncode}]')
     message_text += " Готово ✅"
     if stdout:
-        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + fmt.code(f"{stdout.decode()}\n") 
+        message_text += "\nОбнаружены ошибки в stdout потоке:\n" + f"<code>{stdout.decode()}</code>\n"
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
-        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + fmt.code(f"{stderr.decode()}\n")
+        message_text += "\nОбнаружены ошибки в stderr потоке:\n" + f"<code>{stderr.decode()}</code>\n"
         print(f'[stderr]\n{stderr.decode()}')
-    await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
+    await message.edit_text(message_text, parse_mode="HTML")
 
 async def match_audio_query(message, input_file, fingerprint_db):
-    message_text = message.text + "\n\nИщем аудио хэши в базе данных..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode=types.ParseMode.MARKDOWN)
+    message_text = message.html_text + "\n\nИщем аудио хэши в базе данных..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
     if config.audfprint_mode == '0':
         cmd = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '120', '-D', '2000', '-X', '-F', '18']
     elif config.audfprint_mode == '1':
@@ -192,8 +192,8 @@ async def match_audio_query(message, input_file, fingerprint_db):
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
-    message_text += f" Готово ✅\n\nРезультат:\n{fmt.code(stdout.decode())}\n"
-    await message.edit_text(message_text, parse_mode=types.ParseMode.MARKDOWN)
+    message_text += f" Готово ✅\n\nРезультат:\n<code>{stdout.decode()}</code>\n"
+    await message.edit_text(message_text, parse_mode="HTML")
 
 async def delete_audio_hashes(message, fingerprint_db, sample_name):
     cmd = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name, '-H', '2']
@@ -466,7 +466,7 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
             keyboard_markup = types.InlineKeyboardMarkup()
             back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
             keyboard_markup.row(back_btn)
-            await message.reply(f'В папке "{get_selected_folder_name(message.chat.id)}" этот аудио сэмпл уже существует под названием "{d_file_name}"\nОтправьте другой файл', parse_mode=types.ParseMode.MARKDOWN, reply_markup=keyboard_markup)
+            await message.reply(f'В папке "{get_selected_folder_name(message.chat.id)}" этот аудио сэмпл уже существует под названием "{d_file_name}"\nОтправьте другой файл', parse_mode="HTML", reply_markup=keyboard_markup)
             return
      
     if user_data["audio_sample_file_extensions"].lower() in ('.wav', '.mp3', '.wma', '.ogg', '.flac'):
@@ -673,7 +673,7 @@ async def error_bot_blocked(update: types.Update, exception: BotBlocked):
 
 @dp.message_handler(content_types=types.ContentType.ANY)
 async def unknown_message(msg: types.Message):
-    await msg.reply('Я не знаю, что с этим делать\nЯ просто напомню, что есть команда /help', parse_mode=types.ParseMode.MARKDOWN)
+    await msg.reply('Я не знаю, что с этим делать\nЯ просто напомню, что есть команда /help', parse_mode="HTML")
 
 @dp.callback_query_handler(state='*')
 async def callback_handler(query: types.CallbackQuery, state):
