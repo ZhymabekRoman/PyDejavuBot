@@ -599,13 +599,10 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
     
     keyboard_markup = types.InlineKeyboardMarkup()
     manage_folder_btn = types.InlineKeyboardButton('« Вернутся к текущей папке', callback_data= get_selected_folder_name(message.chat.id))
-    upload_sample_btn = types.InlineKeyboardButton('» Удалить еще один сэмпл', callback_data= 'upload_audio_samples')
+    upload_sample_btn = types.InlineKeyboardButton('» Удалить еще один сэмпл  ', callback_data= 'remove_audio_samples')
     keyboard_markup.row(manage_folder_btn)
     keyboard_markup.row(upload_sample_btn)
     await message.reply(f'Аудио сэмпл с названием "{user_data["chosen_sample"]}" успешно удален', reply_markup=keyboard_markup)
-
-    await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
-    
 
 async def quiz_mode_step_1(message: types.Message, back_btn = "folder_manager"):
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -662,13 +659,11 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         os.remove(path_list.normalized_query_audio(query_audio_name + ".mp3"))
         
         keyboard_markup = types.InlineKeyboardMarkup()
-        manage_folder_btn = types.InlineKeyboardButton('« Вернутся к текущей папке', callback_data= get_selected_folder_name(message.chat.id))
-        upload_sample_btn = types.InlineKeyboardButton('» Распознать еще одну запись', callback_data= 'upload_audio_samples')
+        manage_folder_btn = types.InlineKeyboardButton('« Вернутся к текущей папке  ', callback_data= get_selected_folder_name(message.chat.id))
+        upload_sample_btn = types.InlineKeyboardButton('» Распознать еще одну запись', callback_data= 'quiz_mode_1')
         keyboard_markup.row(manage_folder_btn)
         keyboard_markup.row(upload_sample_btn)
         await message.reply(f'Аудио запись успешно распознана', reply_markup=keyboard_markup)
-
-        #await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
     else:
         await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
         return
