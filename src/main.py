@@ -1,7 +1,7 @@
 """ PyDejavuBot
 Бот-помощник для решения музыкальных викторин. Бот написан на aiogram.
 
-/start - открыть глааное меню
+/start - открыть главное меню
 """
 
 ##Region ### START imports section ###
@@ -548,13 +548,19 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     await analyze_audio_sample(managment_msg, path_list.normalized_audio_samples(audio_sample_name + ".mp3"), path_list.fingerprint_db())
     
     os.remove(path_list.tmp_audio_samples(audio_sample_full_name))
-    
+    os.remove(path_list.non_normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+    os.remove(path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+
     db_worker = SQLighter(config.database_name)
     db_worker.register_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data["audio_sample_name"], user_data["audio_sample_file_info"].file_unique_id)
     db_worker.close()
     
-    await message.reply(f'Аудио сэмпл с названием "{user_data["audio_sample_name"]}" успешно сохранён')
-    await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
+    keyboard_markup = types.InlineKeyboardMarkup()
+    manage_folder_btn = types.InlineKeyboardButton('« Вернутся к текущей папке', callback_data= get_selected_folder_name(message.chat.id))
+    upload_sample_btn = types.InlineKeyboardButton('» Загрузить еще один сэмпл', callback_data= 'upload_audio_samples')
+    keyboard_markup.row(manage_folder_btn)
+    keyboard_markup.row(upload_sample_btn)
+    await message.reply(f'Аудио сэмпл с названием "{user_data["audio_sample_name"]}" успешно сохранён', reply_markup=keyboard_markup)
 
 @dp.message_handler(state= Remove_Simples.remove_audio_samples_step_1)
 async def f_remove_audio_samples_step_1(message):
@@ -590,11 +596,14 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
 
     await message.reply(f'Сэмпл "{user_data["chosen_sample"]}" в процесе удаления ...', reply_markup=types.ReplyKeyboardRemove())
     await delete_audio_hashes(message, path_list.fingerprint_db(), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+    
+    keyboard_markup = types.InlineKeyboardMarkup()
+    manage_folder_btn = types.InlineKeyboardButton('« Вернутся к текущей папке', callback_data= get_selected_folder_name(message.chat.id))
+    upload_sample_btn = types.InlineKeyboardButton('» Удалить еще один сэмпл', callback_data= 'upload_audio_samples')
+    keyboard_markup.row(manage_folder_btn)
+    keyboard_markup.row(upload_sample_btn)
+    await message.reply(f'Аудио сэмпл с названием "{user_data["chosen_sample"]}" успешно удален', reply_markup=keyboard_markup)
 
-    os.remove(path_list.non_normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
-    os.remove(path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
-
-    await message.reply('Сэмпл успешно удален!')
     await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
     
 
@@ -652,7 +661,14 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         os.remove(path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
         os.remove(path_list.normalized_query_audio(query_audio_name + ".mp3"))
         
-        await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
+        keyboard_markup = types.InlineKeyboardMarkup()
+        manage_folder_btn = types.InlineKeyboardButton('« Вернутся к текущей папке', callback_data= get_selected_folder_name(message.chat.id))
+        upload_sample_btn = types.InlineKeyboardButton('» Распознать еще одну запись', callback_data= 'upload_audio_samples')
+        keyboard_markup.row(manage_folder_btn)
+        keyboard_markup.row(upload_sample_btn)
+        await message.reply(f'Аудио запись успешно распознана', reply_markup=keyboard_markup)
+
+        #await manage_folder(message, get_selected_folder_name(message.chat.id), "start")
     else:
         await message.reply('Мы такой формат не принемаем, пришлите в другом формате\nИзвините за неудобства!')
         return
@@ -676,7 +692,7 @@ async def error_bot_blocked(update: types.Update, exception: BotBlocked):
     print(f"Меня заблокировал пользователь!\nСообщение: {update}\nОшибка: {exception}")
     return True
 
-@dp.message_handler(content_types=types.ContentType.ANY)
+@dp.message_handler(content_types=types.ContentType.ANY, state='*')
 async def unknown_message(msg: types.Message):
     await msg.reply('Я не знаю, что с этим делать\nЯ просто напомню, что есть команда /help', parse_mode="HTML")
 
