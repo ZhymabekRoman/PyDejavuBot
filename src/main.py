@@ -719,15 +719,18 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         await f_folder_list(query.message, 'edit')
     if answer_data == 'create_new_folder':
-        if int(get_user_folders_count(query.message.chat.id)) < 7:
-            await query.answer()
-            await f_create_new_folder_step_1(query.message)
-        else:
-            await query.answer('Список папок превышает 7 папок', True)
+        if int(get_user_folders_count(query.message.chat.id)) > 10:
+            await query.answer('Список папок превышает 10 папок', True)
+            return
+        await query.answer()
+        await f_create_new_folder_step_1(query.message)
     if answer_data == 'folder_delete':
         await query.answer()
         await f_delete_folder_step_1(query.message)
     if answer_data == 'upload_audio_samples':
+        if len(get_user_folders_list(query.message.chat.id)[get_selected_folder_name(query.message.chat.id)]) > 90:
+            await query.answer('Список аудио сэмплов превышает 90 сэмплов', True)
+            return 
         await query.answer()
         await f_upload_audio_samples_step_1(query.message)
     if answer_data == 'remove_audio_samples':
