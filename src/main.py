@@ -548,8 +548,8 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     await analyze_audio_sample(managment_msg, path_list.normalized_audio_samples(audio_sample_name + ".mp3"), path_list.fingerprint_db())
     
     os.remove(path_list.tmp_audio_samples(audio_sample_full_name))
-    os.remove(path_list.non_normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
-    os.remove(path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+    os.remove(path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"))
+    os.remove(path_list.normalized_audio_samples(audio_sample_name + ".mp3"))
 
     db_worker = SQLighter(config.database_name)
     db_worker.register_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data["audio_sample_name"], user_data["audio_sample_file_info"].file_unique_id)
