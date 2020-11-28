@@ -58,6 +58,14 @@ class SQLighter:
     def set_lang(self, user_id, lang_name):
         with self.connection:
             self.cursor.execute("UPDATE users SET lang = :0 WHERE user_id = :1", {'0': lang_name, '1': user_id})
+    
+#    def get_multiupload(self, user_id):
+#        with self.connection:
+#            return self.cursor.execute("SELECT multiupload FROM users Where user_id= :0", {'0': user_id}).fetchone()[0]
+#            
+#    def set_multiupload(self, user_id, multiupload_status):
+#        with self.connection:
+#            self.cursor.execute("UPDATE users SET multiupload = :0 WHERE user_id = :1", {'0': multiupload_status, '1': user_id})
 
     def register_audio_sample(self, user_id, folder_name, sample_name, file_id):
         with self.connection:

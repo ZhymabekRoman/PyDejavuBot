@@ -27,8 +27,8 @@ API_TOKEN = config.API_TOKEN # Initalialization API token for work with Telegram
 #ConfigureMemoryStorage
 memory_storage = MemoryStorage()
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.DEBUG) 
+#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG) 
 
 # Initialize bot and dispatcher
 bot = Bot(token=API_TOKEN)
@@ -130,7 +130,7 @@ async def check_audio_integrity_and_convert(message, input_file, output_file):
     if stderr:
         print(f'[stderr]\n{stderr.decode()}')
     if os.path.exists(output_file) is False or proc.returncode == 1:
-        managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode="HTML")
+        managment_msg = await message.edit_text(message_text + "\n\nКритическая ошибка, файл отсутсвует, отмена...", parse_mode="HTML")
         return False, managment_msg
     message_text += " Готово ✅"
     managment_msg = await message.edit_text(message_text, parse_mode="HTML")
@@ -149,7 +149,7 @@ async def normalize_audio(message, input_file, output_file):
     if stderr:
         print(f'[stderr]\n{stderr.decode()}')
     if os.path.exists(output_file) is False or proc.returncode == 1:
-        managment_msg = await message.edit_text(message_text + "Критическая ошибка, файл отсутсвует, выходим...", parse_mode="HTML")
+        managment_msg = await message.edit_text(message_text + "\n\nКритическая ошибка, файл отсутсвует, отмена...", parse_mode="HTML")
         return False, managment_msg
     managment_msg = await message.edit_text(message_text, parse_mode="HTML")
     return True, managment_msg
@@ -218,8 +218,11 @@ async def bot_settings(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
-    lang_btn = types.InlineKeyboardButton(f'Язык : {get_user_data(callback_query.message.chat.id)[1]}', callback_data= 'edit_lang')
-    keyboard_markup.row(back_btn,lang_btn)
+    lang_btn = types.InlineKeyboardButton(f'Язык интерфейса : {get_user_data(callback_query.message.chat.id)[1]}', callback_data= 'edit_lang')
+    #multiupload_btn = types.InlineKeyboardButton(f'Режим мультигзагрузки : Вкл', callback_data= 'edit_lang')
+    keyboard_markup.row(lang_btn)
+    #keyboard_markup.row(multiupload_btn)
+    keyboard_markup.row(back_btn)
     await callback_query.message.edit_text("Настройки бота:", reply_markup=keyboard_markup)
 
 @dp.callback_query_handler(lambda c: c.data == 'about_bot')
