@@ -119,7 +119,7 @@ def check_name_for_except_chars(string):
     
 ##Region ### START backends section ###
 async def download_file(message, file_id, destination):
-    message_text = message.html_text + "Загрузка файла..."
+    message_text = message.html_text + "\n\nЗагрузка файла..."
     await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
     try:
         await bot.download_file_by_id(file_id, destination)
@@ -465,12 +465,12 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         
     user_data = await state.get_data()
     
-    if int(user_data["audio_sample_file_info"].file_size) >= 20871520:
-        keyboard_markup = types.InlineKeyboardMarkup()
-        back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
-        keyboard_markup.row(back_btn)
-        await message.reply('Размер файла превышает 20 mb. Отправьте другой файл', reply_markup=keyboard_markup)
-        return
+#    if int(user_data["audio_sample_file_info"].file_size) >= 20871520:
+#        keyboard_markup = types.InlineKeyboardMarkup()
+#        back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+#        keyboard_markup.row(back_btn)
+#        await message.reply('Размер файла превышает 20 mb. Отправьте другой файл', reply_markup=keyboard_markup)
+#        return
         
     ### Проверка на загруженность файла в текущей папки через db
     file_unique_id = user_data["audio_sample_file_info"].file_unique_id
@@ -537,7 +537,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
             return
      
     await state.finish()
-    managment_msg = await message.reply('Задача поставлена в поток!\n\n')
+    managment_msg = await message.reply('Задача поставлена в поток!')
     
     try:
         # Stage 0 : download file
@@ -651,7 +651,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
     
     if audio_sample_file_extensions in ('.ogg'):
         await state.finish()
-        managment_msg = await message.reply('Задача поставлена в поток!\n\n')
+        managment_msg = await message.reply('Задача поставлена в поток!')
     
         try:
             # Stage 0 : download file
