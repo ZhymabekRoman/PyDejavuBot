@@ -129,8 +129,7 @@ async def download_file(message, file_id, destination):
         raise
     else:
         managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
-    finally:
-        return managment_msg
+    return managment_msg
 
 async def check_audio_integrity_and_convert(message, input_file, output_file):
     message_text = message.html_text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
@@ -150,8 +149,7 @@ async def check_audio_integrity_and_convert(message, input_file, output_file):
         raise
     else:
         managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
-    finally:
-        return managment_msg
+    return managment_msg
 
 async def normalize_audio(message, input_file, output_file):
     message_text = message.html_text + "\n\nНормализуем аудио..."
