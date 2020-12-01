@@ -124,29 +124,34 @@ async def download_file(message, file_id, destination):
     try:
         await bot.download_file_by_id(file_id, destination)
     except Exception as ex:
-        managment_msg = await message.edit_text(message_text + "\nКритическая ошибка, отмена...", parse_mode="HTML")
+        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
         logging.exception(ex)
         raise
     else:
         managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
-    return managment_msg
+    finally:
+        return managment_msg
 
 async def check_audio_integrity_and_convert(message, input_file, output_file):
     message_text = message.html_text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
     await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
-    cmd = ['ffmpeg', '-nostdin','-hide_banner', '-loglevel', 'panic', '-i', input_file,'-vn', output_file]
-    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await proc.communicate()
-    print(f'[{cmd!r} exited with {proc.returncode}]')
-    if stdout:
+    try:
+        cmd = ['ffmpeg', '-nostdin','-hide_banner', '-loglevel', 'panic', '-i', input_file,'-vn', output_file]
+        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await proc.communicate()
+        print(f'[{cmd!r} exited with {proc.returncode}]')
         print(f'[stdout]\n{stdout.decode()}')
-    if stderr:
         print(f'[stderr]\n{stderr.decode()}')
-    if os.path.exists(output_file) is False or proc.returncode == 1:
-        managment_msg = await message.edit_text(message_text + "\nКритическая ошибка, отмена...", parse_mode="HTML")
-        return False, managment_msg
-    managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
-    return True, managment_msg
+        if os.path.exists(output_file) is False or proc.returncode == 1:
+            raise
+    except Exception as ex:
+        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
+        logging.exception(ex)
+        raise
+    else:
+        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
+    finally:
+        return managment_msg
 
 async def normalize_audio(message, input_file, output_file):
     message_text = message.html_text + "\n\nНормализуем аудио..."
@@ -542,15 +547,10 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     try:
         # Stage 0 : download file
         managment_msg = await download_file(managment_msg, file_id, path_list.tmp_audio_samples(audio_sample_full_name))
+        # Stage 1 : check audio files for integrity and convert them
+        managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_audio_samples(audio_sample_full_name), path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"))
     except:
         await f_folder_list(message, 'start')
-        return
-    
-    # Stage 1 : check audio files for integrity and convert them
-    ffmpeg_status, managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_audio_samples(audio_sample_full_name), path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"))
-    if ffmpeg_status is False:
-        os.remove(path_list.tmp_audio_samples(audio_sample_full_name))
-        await f_folder_list(message, 'start') 
         return
     
     # Stage 2 : mormalize audio
@@ -656,16 +656,12 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         try:
             # Stage 0 : download file
             managment_msg = await download_file(managment_msg, file_id, path_list.tmp_query_audio(query_audio_full_name))
+            # Stage 1 : check audio files for integrity and convert them
+            managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_query_audio(query_audio_full_name), path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
         except:
             await f_folder_list(message, 'start')
             return
         
-        # Stage 1 : check audio files for integrity and convert them
-        ffmpeg_status, managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_query_audio(query_audio_full_name), path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
-        if ffmpeg_status is False:
-            await f_folder_list(message, 'start') 
-            return
-    
         # Stage 2 : mormalize audio
         ffmpeg_normalizing_status, managment_msg = await normalize_audio(managment_msg, path_list.non_normalized_query_audio(query_audio_name + ".mp3"), path_list.normalized_query_audio(query_audio_name + ".mp3"))
         if ffmpeg_normalizing_status is False:
