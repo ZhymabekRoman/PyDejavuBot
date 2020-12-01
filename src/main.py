@@ -94,7 +94,6 @@ def set_selected_folder_name(user_id, set_name):
     global curent_folder_name
     curent_folder_name[user_id] = str(set_name)
     
-##Region ### START backends section ###
 def get_user_folders_list(user_id):
     db_worker = SQLighter(config.database_name)
     db_data = db_worker.select_user_folders_list(user_id)
@@ -118,6 +117,20 @@ def check_name_for_except_chars(string):
     find_exceptions = re.compile('([{}])'.format(exception_chars))
     return find_exceptions.findall(string)
     
+##Region ### START backends section ###
+async def download_file(message, file_id, destination):
+    message_text = message.html_text + "Загрузка файла..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
+    try:
+        await bot.download_file_by_id(file_id, destination)
+    except Exception as ex:
+        managment_msg = await message.edit_text(message_text + "\nКритическая ошибка, отмена...", parse_mode="HTML")
+        logging.exception(ex)
+        raise
+    else:
+        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
+    return managment_msg
+
 async def check_audio_integrity_and_convert(message, input_file, output_file):
     message_text = message.html_text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
     await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
@@ -130,10 +143,9 @@ async def check_audio_integrity_and_convert(message, input_file, output_file):
     if stderr:
         print(f'[stderr]\n{stderr.decode()}')
     if os.path.exists(output_file) is False or proc.returncode == 1:
-        managment_msg = await message.edit_text(message_text + "\n\nКритическая ошибка, файл отсутсвует, отмена...", parse_mode="HTML")
+        managment_msg = await message.edit_text(message_text + "\nКритическая ошибка, отмена...", parse_mode="HTML")
         return False, managment_msg
-    message_text += " Готово ✅"
-    managment_msg = await message.edit_text(message_text, parse_mode="HTML")
+    managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
     return True, managment_msg
 
 async def normalize_audio(message, input_file, output_file):
@@ -143,15 +155,14 @@ async def normalize_audio(message, input_file, output_file):
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
-    message_text += " Готово ✅"
     if stdout:
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
         print(f'[stderr]\n{stderr.decode()}')
     if os.path.exists(output_file) is False or proc.returncode == 1:
-        managment_msg = await message.edit_text(message_text + "\n\nКритическая ошибка, файл отсутсвует, отмена...", parse_mode="HTML")
+        managment_msg = await message.edit_text(message_text + "\nКритическая ошибка, отмена...", parse_mode="HTML")
         return False, managment_msg
-    managment_msg = await message.edit_text(message_text, parse_mode="HTML")
+    managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
     return True, managment_msg
 
 async def analyze_audio_sample(message, input_file, fingerprint_db):
@@ -168,12 +179,11 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
     proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     stdout, stderr = await proc.communicate()
     print(f'[{cmd!r} exited with {proc.returncode}]')
-    message_text += " Готово ✅"
     if stdout:
         print(f'[stdout]\n{stdout.decode()}')
     if stderr:
         print(f'[stderr]\n{stderr.decode()}')
-    await message.edit_text(message_text, parse_mode="HTML")
+    await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
 
 async def match_audio_query(message, input_file, fingerprint_db):
     message_text = message.html_text + "\n\nИщем аудио хэши в базе данных..."
@@ -448,9 +458,8 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         await state.update_data(audio_sample_file_name =  os.path.splitext(name_file)[0])
         await state.update_data(audio_sample_file_extensions =  os.path.splitext(name_file)[1])
     elif user_data["audio_sample_content_type"] == "audio":
-        ### New in Bot API 5.0
         await state.update_data(audio_sample_file_info=user_data["audio_sample_message"].audio)
-        name_file = user_data["audio_sample_message"].audio.file_name
+        name_file = user_data["audio_sample_message"].audio.file_name ### New in Bot API 5.0
         await state.update_data(audio_sample_file_name =  os.path.splitext(name_file)[0])
         await state.update_data(audio_sample_file_extensions =  os.path.splitext(name_file)[1])
         
@@ -528,10 +537,14 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
             return
      
     await state.finish()
+    managment_msg = await message.reply('Задача поставлена в поток!\n\n')
     
-    managment_msg = await message.reply('Загрузка файла... Подождите...')
-    await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_audio_samples(audio_sample_full_name))
-    managment_msg = await managment_msg.edit_text("Загрузка файла... Готово ✅")
+    try:
+        # Stage 0 : download file
+        managment_msg = await download_file(managment_msg, file_id, path_list.tmp_audio_samples(audio_sample_full_name))
+    except:
+        await f_folder_list(message, 'start')
+        return
     
     # Stage 1 : check audio files for integrity and convert them
     ffmpeg_status, managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_audio_samples(audio_sample_full_name), path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"))
@@ -638,10 +651,14 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
     
     if audio_sample_file_extensions in ('.ogg'):
         await state.finish()
-        
-        managment_msg = await message.reply('Загрузка файла... Подождите...')
-        await bot.download_file_by_id(file_id=file_id, destination = path_list.tmp_query_audio(query_audio_full_name))
-        managment_msg = await managment_msg.edit_text("Загрузка файла... Готово ✅")
+        managment_msg = await message.reply('Задача поставлена в поток!\n\n')
+    
+        try:
+            # Stage 0 : download file
+            managment_msg = await download_file(managment_msg, file_id, path_list.tmp_query_audio(query_audio_full_name))
+        except:
+            await f_folder_list(message, 'start')
+            return
         
         # Stage 1 : check audio files for integrity and convert them
         ffmpeg_status, managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_query_audio(query_audio_full_name), path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
