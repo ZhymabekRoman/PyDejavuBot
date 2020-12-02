@@ -152,7 +152,7 @@ async def check_audio_integrity_and_convert(message, input_file, output_file):
     return managment_msg
 
 async def normalize_audio(message, input_file, output_file):
-    message_text = message.html_text + "\n\nНормализуем аудио..."
+    message_text = message.html_text + "\n\nНормализация аудио..."
     await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
     try:
         cmd = ['ffmpeg-normalize', '-q', input_file, '-c:a', 'libmp3lame', '-o', output_file]
@@ -172,7 +172,7 @@ async def normalize_audio(message, input_file, output_file):
     return managment_msg
 
 async def analyze_audio_sample(message, input_file, fingerprint_db):
-    message_text = message.html_text + "\n\nРегистрируем аудио хэшов в базу данных..."
+    message_text = message.html_text + "\n\nРегистрируем аудио хэши в база данных..."
     await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
     try:
         if os.path.exists(fingerprint_db) is False:
