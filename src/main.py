@@ -464,7 +464,7 @@ async def f_upload_audio_samples_step_1(message):
     keyboard_markup.row(back_btn)
     await message.edit_text(
                     f'Вы работаете с папкой "{get_selected_folder_name(message.chat.id)}", в режиме загрузки аудио сэмплов\n\n'
-                    '<b>Поддерживаемые форматы</b> - mp3, wav, wma, ogg, flac;\n'
+                    '<b>Поддерживаемые форматы</b> - mp3, wav, wma, ogg, flac, aac;\n'
                     '<b>Максимальный размер файла</b> - 20мб. Это максимальный размер для Telegram ботов;\n'
                     '<b>Файлы нужно загружать по одному !</b>\n\n'
                     '<i>Жду от тебя аудио сэмпл</i>',
@@ -508,7 +508,7 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
             await message.reply(f'В папке "{get_selected_folder_name(message.chat.id)}" этот аудио сэмпл уже существует под названием "{d_file_name}"\nОтправьте другой файл', reply_markup=keyboard_markup)
             return
      
-    if user_data["audio_sample_file_extensions"].lower() in ('.wav', '.mp3', '.wma', '.ogg', '.flac'):
+    if user_data["audio_sample_file_extensions"].lower() in ('.aac','.wav', '.mp3', '.wma', '.ogg', '.flac'):
         await Upload_Simples.upload_audio_samples_step_3.set()
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
