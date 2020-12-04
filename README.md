@@ -10,26 +10,38 @@ First of all, the bot is useful for professional musicians. The main focus was m
 - [x] Fully asynchronous Telegram bot written in Python 3.
 - [x] High speed audio recognition 
 - [x] High recognition accuracy
-- [ ] Multilanguage supporting : En,  Ru, Kz (WIP)
+- [ ] Multilanguage supporting : En,  Ru, Kz (_WIP*)_
 
 ## Used libraries and third-party programs :
-audfprint - Python version of Matlab implementation of Landmark audio recognition system. This is the heart of the bot itself. A huge thank to Dan Ellis, Columbia University, and Google. Link : https://github.com/dpwe/audfprint
+[audfprint](https://github.com/dpwe/audfprint) - Python version of Matlab implementation of Landmark audio recognition system. This is the heart of the bot itself. A huge thank to Dan Ellis, Columbia University, and Google.
 
-ffmpeg - third-party super-powerful program for working with audio and video. Used for converting and working with audio hashes.
+[ffmpeg](https://ffmpeg.org/) - third-party super-powerful program for working with audio and video. Used for converting and working with audio hashes.
 
 ## Installation : 
-1) In Ubuntu or Debian based distribution install ffmpeg, python 3 and pip3 :
-`sudo apt install python3 python3-pip ffmpeg git -y`
+1) In Ubuntu or Debian based distribution install ffmpeg, python3, pip3 and git:
+```
+sudo apt install python3 python3-pip ffmpeg git -y
+```
 2) Clone this repository :
-`git clone https://github.com/ZhymabekRoman/PyDejavuBot`
-3) Install all python depends via pip3: 
-`cd PyDejavuBot/
-pip3 install -r requirements.txt`
-4) Initialize bot configurations:
-`cd src/
-python3 first_start.py`
+```
+git clone https://github.com/ZhymabekRoman/PyDejavuBot
+```
+3) Install all python depends, that required for bot operation, via pip3: 
+```
+cd PyDejavuBot/
+pip3 install -r requirements.txt
+```
+
+4) Initialize bot configurations. This should only be done at the very first start of the bot:
+```
+cd src/
+python3 first_start.py
+```
 and answer the script's questions.
+
 5) Launching the bot:
-`python3 main.py`
+```
+python3 main.py
+```
 
 _*WIP - Working in process_
