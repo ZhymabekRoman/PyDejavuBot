@@ -1,6 +1,8 @@
 # PyDejavuBot
 [![CodeFactor](https://www.codefactor.io/repository/github/zhymabekroman/pydejavubot/badge)](https://www.codefactor.io/repository/github/zhymabekroman/pydejavubot)
 
+|**English verssion** | [Русская версия](https://github.com/ZhymabekRoman/PyDejavuBot/blob/master/README-RU.md) |
+
 PyDejavuBot (a.k.a. LenDejavuBot) - Telegram bot, designed for solving music quizzes. The main focus of the bot is stability, speed, and audio recognitions quality. In the beginning, the bot was written on PyTelegramBotApi, but an emergency decision was made to switch to a more stable and powerful library - aiogram. Audio recognition system based on Landmark audio fingerprinting system.
 
 ## Destination :
