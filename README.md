@@ -6,7 +6,9 @@
 **PyDejavuBot** (a.k.a. **LenDejavuBot** - Telegram bot, designed for solving music quizzes. The main focus of the bot is stability, speed, and audio recognitions quality. In the beginning, the bot was written on PyTelegramBotApi, but an emergency decision was made to switch to a more stable and powerful library - aiogram. Audio recognition system based on Landmark audio fingerprinting system.
 
 ## Destination :
-First of all, the bot is useful for professional musicians. The main focus was made for students of music schools, colleges, and conservatories. Few people know, but musicians have music lessons (some), which are asked music quizzes that you need to learn and remember each audio recording and with the name of the audio recording itself . Sometimes it happens that this list is impossible to learn and it even happens that the list itself reaches up to 50 audio recordings. And all this needs to be taught. Undoubtedly, this is a very time-consuming job, and not everyone gets a good rating. 
+First of all, the bot is useful for professional musicians. The main focus was made for students of music schools, colleges, and conservatories. Few people know, but musicians have some music lessons, which are asked music quizzes, where you need to teach and remember each audio recording and the name of the audio recording itself . Sometimes that the list itself reaches up to 40 audio recordings. Undoubtedly, this is a very time-consuming job, and not everyone gets a good rating.
+
+Shazam is not particularly useful here, since it sometimes does not correctly recognize the audio recording itself. If even correctly recognized, then the information of the recognized record is not enough for the teacher
 
 ## Features :
 - [x] Fully asynchronous Telegram bot written in Python 3.
