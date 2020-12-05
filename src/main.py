@@ -22,10 +22,12 @@ import random
 import string
 ##EndRegion ### END imports section ###
 
-API_TOKEN = config.API_TOKEN # Initalialization API token for work with Telegram Bot
+# Initalialization API token for work with Telegram Bot
+API_TOKEN = config.API_TOKEN 
 
-#ConfigureMemoryStorage
+# Configure Memory Storage
 memory_storage = MemoryStorage()
+
 # Configure logging
 #logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.DEBUG) 
@@ -676,7 +678,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
     managment_msg = await message.reply('Задача поставлена в поток!')
     
     try:
-       # Stage 0 : download file
+        # Stage 0 : download file
         managment_msg = await download_file(managment_msg, file_id, path_list.tmp_query_audio(query_audio_full_name))
         # Stage 1 : check audio files for integrity and convert them
         managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_query_audio(query_audio_full_name), path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
@@ -711,11 +713,6 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
 async def process_help_command(message: types.Message):
     await message.reply("Напиши мне что-нибудь, и я отпрпавлю этот текст тебе в ответ!")
 
-#@dp.message_handler(commands=['stop'])
-#async def stop(message: types.Message):
-#    await message.reply("Бот остановлен!")
-#    sys.exit()
-    
 @dp.errors_handler(exception=BotBlocked)
 async def error_bot_blocked(update: types.Update, exception: BotBlocked):
     print(f"Меня заблокировал пользователь!\nСообщение: {update}\nОшибка: {exception}")
