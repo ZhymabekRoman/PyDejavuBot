@@ -1,10 +1,11 @@
-""" PyDejavuBot
-Бот-помощник для решения музыкальных викторин. Бот написан на aiogram.
+# SCRIPT # ======================================================================================================================
+# Name...........: PyDejavuBot - Free Open Source Telegram Bot, designed for recognize a melody.
+# File name......: main.py
+# Description ...: Main PyDejavuBot's code
+# Author ........: ZhymabekRoman
+# ===============================================================================================================================
 
-/start - открыть главное меню
-"""
-
-##Region ### START imports section ###
+# Region ### START imports section ###
 from database import  SQLighter
 import re
 import config
@@ -20,7 +21,7 @@ import shutil
 import sys
 import random
 import string
-##EndRegion ### END imports section ###
+# EndRegion ### END imports section ###
 
 # Initalialization API token for work with Telegram Bot
 API_TOKEN = config.API_TOKEN 
@@ -36,6 +37,7 @@ logging.basicConfig(level=logging.DEBUG)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=memory_storage)
 
+# Region ### START states section ###
 class Create_Folders(StatesGroup):
     create_new_folder_step_1 = State()
     create_new_folder_step_2 = State()
@@ -50,6 +52,7 @@ class Upload_Queries(StatesGroup):
     upload_query_step_1 = State()
     upload_query_step_2 = State()
     upload_query_step_3 = State()
+# Region ### END states section ###
 
 class get_path:
     def __init__(self, user_id):
@@ -73,6 +76,13 @@ class get_path:
         return f'data/query_samples/normalized/{self.user_id}/{self.user_folder}/{file_name}'
  
 def get_random_string(length):
+        """Returns random generated string with only letters
+
+        Parameters
+        ----------
+        length : int, required
+            Number of letters in randomly generated string
+        """
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for i in range(length))
  
@@ -797,4 +807,4 @@ async def callback_handler(query: types.CallbackQuery, state):
             await quiz_mode_step_1(query.message, "quiz_mode_step_0")
             
 if __name__ == '__main__':
-    executor.start_polling(dp) # , skip_updates=True
+    executor.start_polling(dp, skip_updates=True)
