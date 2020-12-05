@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # SCRIPT # ======================================================================================================================
 # Name...........: PyDejavuBot - Free Open Source Telegram Bot, designed for recognize a melody.
 # File name......: main.py
@@ -5,29 +6,27 @@
 # Author ........: ZhymabekRoman
 # ===============================================================================================================================
 
-# Region ### START imports section ###
-from database import  SQLighter
-import re
-import config
-import logging
-import asyncio
-from aiogram.utils.exceptions import BotBlocked
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.dispatcher import FSMContext
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
 import os
 import shutil
 import sys
 import random
 import string
-# EndRegion ### END imports section ###
+import re
+import config
+import logging
+import asyncio
+from database import SQLighter
+from aiogram.utils.exceptions import BotBlocked
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.dispatcher import FSMContext
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 # Initalialization API token for work with Telegram Bot
 API_TOKEN = config.API_TOKEN 
 
 # Configure Memory Storage
-memory_storage = MemoryStorage()
+memory_storage = MemoryStorage()   ### TODO - Redis storage
 
 # Configure logging
 #logging.basicConfig(level=logging.INFO)
@@ -37,7 +36,6 @@ logging.basicConfig(level=logging.DEBUG)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=memory_storage)
 
-# Region ### START states section ###
 class Create_Folders(StatesGroup):
     create_new_folder_step_1 = State()
     create_new_folder_step_2 = State()
@@ -52,7 +50,6 @@ class Upload_Queries(StatesGroup):
     upload_query_step_1 = State()
     upload_query_step_2 = State()
     upload_query_step_3 = State()
-# Region ### END states section ###
 
 class get_path:
     def __init__(self, user_id):
@@ -76,13 +73,7 @@ class get_path:
         return f'data/query_samples/normalized/{self.user_id}/{self.user_folder}/{file_name}'
  
 def get_random_string(length):
-        """Returns random generated string with only letters
-
-        Parameters
-        ----------
-        length : int, required
-            Number of letters in randomly generated string
-        """
+    """Returns random generated string with a certain quantity letters"""
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for i in range(length))
  
