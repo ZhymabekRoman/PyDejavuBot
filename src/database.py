@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+# SCRIPT # ======================================================================================================================
+# Name...........: PyDejavuBot - Free Open Source Telegram Bot, designed for recognize a melody.
+# File name......: database.py
+# Description ...: Is designed to work with the database. Is the conductor between databases with the bot master code
+# Author ........: ZhymabekRoman
+# ===============================================================================================================================
+
 import sqlite3
 import json
 
@@ -29,22 +36,22 @@ class SQLighter:
     
     def create_folder(self, user_id, folder_name):
         with self.connection:
-            ### Получаем папки пользывателя
+            # Получаем папки пользывателя
             folders_list = self.select_user_folders_list(user_id)
-            ### Создаем словарь с названием папки и стренным внутри еще одним пустым словарем, что бы хранить там данные сэмлов : )
+            # Создаем словарь с названием папки и стренным внутри еще одним пустым словарем, что бы хранить там данные сэмлов : )
             new_folder = {folder_name: {}}
-            ### Мерджуем два словаря : новый и старый
+            # Мерджуем два словаря : новый и старый
             data_to_add = merge_two_dicts(folders_list, new_folder)
-            ### Коммитим, предварительно упаковав в json : )
+            # Коммитим, предварительно упаковав в json : )
             self.cursor.execute("UPDATE users SET folders =  :0 WHERE User_id = :1", {'0': json.dumps(data_to_add), '1': user_id})
 
     def delete_folder(self, user_id, folder_name):
         with self.connection:
-            ### Получаем папки пользывателя
+            # Получаем папки пользывателя
             folders_list = self.select_user_folders_list(user_id)
-            ### Удаляем папку от туда
+            # Удаляем папку от туда
             del folders_list[folder_name]
-            ### Коммитим !
+            # Коммитим !
             self.cursor.execute("UPDATE users SET folders =  :0 WHERE user_id = :1", {'0': json.dumps(folders_list), '1': user_id})
 
     def create_empety_user_data(self, user_id):
@@ -58,51 +65,43 @@ class SQLighter:
     def set_lang(self, user_id, lang_name):
         with self.connection:
             self.cursor.execute("UPDATE users SET lang = :0 WHERE user_id = :1", {'0': lang_name, '1': user_id})
-    
-#    def get_multiupload(self, user_id):
-#        with self.connection:
-#            return self.cursor.execute("SELECT multiupload FROM users Where user_id= :0", {'0': user_id}).fetchone()[0]
-#            
-#    def set_multiupload(self, user_id, multiupload_status):
-#        with self.connection:
-#            self.cursor.execute("UPDATE users SET multiupload = :0 WHERE user_id = :1", {'0': multiupload_status, '1': user_id})
 
     def register_audio_sample(self, user_id, folder_name, sample_name, file_id):
         with self.connection:
-            ### Получаем список сэмплов текущей папкм
+            # Получаем список сэмплов текущей папкм
             folder_samples = self.select_user_folders_list(user_id)[folder_name]
-            ### Создаем словарь с названием нового сэмла и file_id сэмпла : )
+            # Создаем словарь с названием нового сэмла и file_id сэмпла : )
             new_sample = {sample_name: file_id}
-            ### Мерджуем старые сэмплы с новыми из текущей папкм
+            # Мерджуем старые сэмплы с новыми из текущей папкм
             curent_folder_samples = merge_two_dicts(folder_samples, new_sample)
-            ### Обновляем  сэмплы текущей папки в список папок
-            ## Но прежде получаем весь список папкок текущего пользывателя
+            # Обновляем  сэмплы текущей папки в список папок
+            # Но прежде получаем весь список папкок текущего пользывателя
             folders_list = self.select_user_folders_list(user_id)
             folders_list[folder_name] = curent_folder_samples
-            ### Коммитим !
+            # Коммитим !
             self.cursor.execute("UPDATE users SET folders =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
             
     def unregister_audio_sample(self, user_id, folder_name, sample_name):
         with self.connection:
-            ### Получаем список сэмплов текущей папкм
+            # Получаем список сэмплов текущей папкм
             folder_samples = self.select_user_folders_list(user_id)[folder_name]
-            ### Удаляем сэмпл текущей папки
+            # Удаляем сэмпл текущей папки
             del folder_samples[sample_name]
-            ### Обновляем  сэмплы текущей папки в список папок
-            ## Но прежде получаем весь список папкок текущего пользывателя
+            # Обновляем  сэмплы текущей папки в список папок
+            # Но прежде получаем весь список папкок текущего пользывателя
             folders_list = self.select_user_folders_list(user_id)
             folders_list[folder_name] =folder_samples
-            ### Коммитим !
+            # Коммитим !
             self.cursor.execute("UPDATE users SET folders =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
             
     def unregister_all_audio_sample(self, user_id, folder_name):
         with self.connection:
-            ### Удаляем ВСЕ сэмпл текущей папки
-            ### Обновляем  сэмплы текущей папки в список папок
-            ## Но прежде получаем весь список папкок текущего пользывателя
+            # Удаляем ВСЕ сэмпл текущей папки
+            # Обновляем  сэмплы текущей папки в список папок
+            # Но прежде получаем весь список папкок текущего пользывателя
             folders_list = self.select_user_folders_list(user_id)
             folders_list[folder_name] = {}
-            ### Коммитим !
+            # Коммитим !
             self.cursor.execute("UPDATE users SET folders =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
             
     def close(self):
