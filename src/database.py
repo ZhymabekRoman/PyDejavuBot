@@ -8,12 +8,7 @@
 
 import sqlite3
 import json
-
-def merge_two_dicts(x, y):
-    """Given two dictionaries, merge them into a new dict as a shallow copy."""
-    z = x.copy()
-    z.update(y)
-    return z
+from other.py import merge_two_dicts
 
 class SQLighter:
 
@@ -27,14 +22,15 @@ class SQLighter:
     
     def select_user_folders_list(self, user_id):
         with self.connection:
-            return json.loads((self.cursor.execute("SELECT folders FROM users Where user_id= :0", {'0': user_id}).fetchone())[0])
+            return json.loads(self.cursor.execute("SELECT folders FROM users Where user_id= :0", {'0': user_id}).fetchone()[0])
     
     def select_user_folders_count(self, user_id):
         with self.connection:
-            out =  json.loads((self.cursor.execute("SELECT folders FROM users Where user_id= :0", {'0': user_id}).fetchone())[0])
-            return len(out)
+            user_folders =  json.loads(self.cursor.execute("SELECT folders FROM users Where user_id= :0", {'0': user_id}).fetchone()[0])
+            return len(user_folders)
     
     def create_folder(self, user_id, folder_name):
+        """Создает папку"""
         with self.connection:
             # Получаем папки пользывателя
             folders_list = self.select_user_folders_list(user_id)
@@ -46,6 +42,7 @@ class SQLighter:
             self.cursor.execute("UPDATE users SET folders =  :0 WHERE User_id = :1", {'0': json.dumps(data_to_add), '1': user_id})
 
     def delete_folder(self, user_id, folder_name):
+        """Удаляет папку"""
         with self.connection:
             # Получаем папки пользывателя
             folders_list = self.select_user_folders_list(user_id)
@@ -55,18 +52,22 @@ class SQLighter:
             self.cursor.execute("UPDATE users SET folders =  :0 WHERE user_id = :1", {'0': json.dumps(folders_list), '1': user_id})
 
     def create_empety_user_data(self, user_id):
+        """Регистрирует ID юзера без указания языка"""
         with self.connection:
             self.cursor.execute("INSERT INTO users VALUES (:0, :1, :2)", {'0': user_id, '1': '', '2': '{}'})
             
     def get_lang(self, user_id):
+        """Возвращяет язык интерфейса текущего пользывателя"""
         with self.connection:
             return self.cursor.execute("SELECT lang FROM users Where user_id= :0", {'0': user_id}).fetchone()[0]
             
     def set_lang(self, user_id, lang_name):
+        """Возвращяет язык интерфейса текущего пользывателя"""
         with self.connection:
             self.cursor.execute("UPDATE users SET lang = :0 WHERE user_id = :1", {'0': lang_name, '1': user_id})
 
     def register_audio_sample(self, user_id, folder_name, sample_name, file_id):
+        """Регистрирует сэмпл в папку"""
         with self.connection:
             # Получаем список сэмплов текущей папкм
             folder_samples = self.select_user_folders_list(user_id)[folder_name]
@@ -82,6 +83,7 @@ class SQLighter:
             self.cursor.execute("UPDATE users SET folders =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
             
     def unregister_audio_sample(self, user_id, folder_name, sample_name):
+        """Удаляет определенный сэмпл из папки"""
         with self.connection:
             # Получаем список сэмплов текущей папкм
             folder_samples = self.select_user_folders_list(user_id)[folder_name]
@@ -90,13 +92,13 @@ class SQLighter:
             # Обновляем  сэмплы текущей папки в список папок
             # Но прежде получаем весь список папкок текущего пользывателя
             folders_list = self.select_user_folders_list(user_id)
-            folders_list[folder_name] =folder_samples
+            folders_list[folder_name] = folder_samples
             # Коммитим !
             self.cursor.execute("UPDATE users SET folders =  :0  WHERE User_id = :1", {'0': json.dumps(folders_list), '1': user_id})
             
     def unregister_all_audio_sample(self, user_id, folder_name):
+        """Удаляет ВСЕ сэмпл из папки"""
         with self.connection:
-            # Удаляем ВСЕ сэмпл текущей папки
             # Обновляем  сэмплы текущей папки в список папок
             # Но прежде получаем весь список папкок текущего пользывателя
             folders_list = self.select_user_folders_list(user_id)

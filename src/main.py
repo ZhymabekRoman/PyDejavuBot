@@ -21,15 +21,17 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from other.py import generate_random_string, check_string_for_except_chars
+from backend.py import *
 
 # Initalialization API token for work with Telegram Bot
-API_TOKEN = config.API_TOKEN 
+API_TOKEN = config.API_TOKEN
 
 # Configure Memory Storage
-memory_storage = MemoryStorage()   ### TODO - Redis storage
+memory_storage = MemoryStorage()  ### TODO - Redis storage
 
 # Configure logging
-#logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.DEBUG) 
 
 # Initialize bot and dispatcher
@@ -72,11 +74,6 @@ class get_path:
     def normalized_query_audio(self, file_name=""):
         return f'data/query_samples/normalized/{self.user_id}/{self.user_folder}/{file_name}'
  
-def get_random_string(length):
-    """Returns random generated string with a certain quantity letters"""
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(length))
- 
 def b_get_text_in_lang(data):
 	lang_type = "En"
 	dict_miltilang = {
@@ -89,6 +86,7 @@ def b_get_text_in_lang(data):
 
 curent_folder_name = {}
 
+### CRITICAL TODO №1 - DON'T USE GLOBAL VARIABLES
 def get_selected_folder_name(user_id):
     global curent_folder_name
     return str(curent_folder_name[user_id])
@@ -96,7 +94,11 @@ def get_selected_folder_name(user_id):
 def set_selected_folder_name(user_id, set_name):
     global curent_folder_name
     curent_folder_name[user_id] = str(set_name)
-    
+
+def unset_selected_folder_name(user_id, set_name):
+    global curent_folder_name
+    curent_folder_name[user_id] = str(set_name)
+
 def get_user_folders_list(user_id):
     db_worker = SQLighter(config.database_name)
     db_data = db_worker.select_user_folders_list(user_id)
@@ -114,127 +116,6 @@ def get_user_data(user_id):
     db_data = db_worker.select_user_data(user_id)
     db_worker.close()
     return db_data
-
-def check_name_for_except_chars(string):
-    exception_chars = '\\\/\|<>\?:"\*'
-    find_exceptions = re.compile('([{}])'.format(exception_chars))
-    return find_exceptions.findall(string)
-    
-##Region ### START backends section ###
-async def download_file(message, file_id, destination):
-    message_text = message.html_text + "\n\nЗагрузка файла..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
-    try:
-        await bot.download_file_by_id(file_id, destination)
-    except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
-        raise
-    else:
-        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
-    return managment_msg
-
-async def check_audio_integrity_and_convert(message, input_file, output_file):
-    message_text = message.html_text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
-    try:
-        cmd = ['ffmpeg', '-nostdin','-hide_banner', '-loglevel', 'panic', '-i', input_file,'-vn', output_file]
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await proc.communicate()
-        print(f'[{cmd!r} exited with {proc.returncode}]')
-        print(f'[stdout]\n{stdout.decode()}')
-        print(f'[stderr]\n{stderr.decode()}')
-        if os.path.exists(output_file) is False or proc.returncode == 1:
-            raise
-    except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
-        raise
-    else:
-        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
-    return managment_msg
-
-async def normalize_audio(message, input_file, output_file):
-    message_text = message.html_text + "\n\nНормализация аудио..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
-    try:
-        cmd = ['ffmpeg-normalize', '-q', input_file, '-c:a', 'libmp3lame', '-o', output_file]
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await proc.communicate()
-        print(f'[{cmd!r} exited with {proc.returncode}]')
-        print(f'[stdout]\n{stdout.decode()}')
-        print(f'[stderr]\n{stderr.decode()}')
-        if os.path.exists(output_file) is False or proc.returncode == 1:
-            raise
-    except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
-        raise
-    else:
-        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
-    return managment_msg
-
-async def analyze_audio_sample(message, input_file, fingerprint_db):
-    message_text = message.html_text + "\n\nРегистрируем аудио хэши в база данных..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
-    try:
-        if os.path.exists(fingerprint_db) is False:
-            db_hashes_add_method = 'new'
-        elif os.path.exists(fingerprint_db) is True:
-            db_hashes_add_method = 'add'
-        if config.audfprint_mode == '0':
-            cmd = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '120', '-X', '-F', '18']
-        elif config.audfprint_mode == '1':
-            cmd = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file]
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await proc.communicate()
-        print(f'[{cmd!r} exited with {proc.returncode}]')
-        print(f'[stdout]\n{stdout.decode()}')
-        print(f'[stderr]\n{stderr.decode()}')
-        if os.path.exists(fingerprint_db) is False or proc.returncode == 1:
-            raise
-    except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
-        raise
-    else:
-        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
-    return managment_msg
-    
-async def match_audio_query(message, input_file, fingerprint_db):
-    message_text = message.html_text + "\n\nИщем аудио хэши в базе данных..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
-    try:
-        if config.audfprint_mode == '0':
-            cmd = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '120', '-D', '2000', '-X', '-F', '18']
-        elif config.audfprint_mode == '1':
-            cmd = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await proc.communicate()
-        print(f'[{cmd!r} exited with {proc.returncode}]')
-        print(f'[stdout]\n{stdout.decode()}')
-        print(f'[stderr]\n{stderr.decode()}')
-        if os.path.exists(fingerprint_db) is False or proc.returncode == 1:
-            raise
-    except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
-        raise
-    else:
-        managment_msg = await message.edit_text(message_text + f" Готово ✅\n\nРезультат:\n<code>{stdout.decode()}</code>\n", parse_mode="HTML")
-    return managment_msg
-
-async def delete_audio_hashes(message, fingerprint_db, sample_name):
-    try:
-        cmd = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name, '-H', '2']
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await proc.communicate()
-        print(f'[{cmd!r} exited with {proc.returncode}]')
-        print(f'[stdout]\n{stdout.decode()}')
-        print(f'[stderr]\n{stderr.decode()}')
-    except:
-        pass
-##EndRegion ### END backends section ###
 
 @dp.message_handler(commands=['start'], state='*')
 async def send_welcome(message: types.Message):
@@ -256,9 +137,7 @@ async def bot_settings(callback_query: types.CallbackQuery):
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
     lang_btn = types.InlineKeyboardButton(f'Язык интерфейса : {get_user_data(callback_query.message.chat.id)[1]}', callback_data= 'edit_lang')
-    #multiupload_btn = types.InlineKeyboardButton(f'Режим мультигзагрузки : Вкл', callback_data= 'edit_lang')
     keyboard_markup.row(lang_btn)
-    #keyboard_markup.row(multiupload_btn)
     keyboard_markup.row(back_btn)
     await callback_query.message.edit_text("Настройки бота:", reply_markup=keyboard_markup)
 
@@ -358,11 +237,11 @@ async def f_create_new_folder_step_2(message: types.Message, state: FSMContext):
             await message.reply('Данная папка уже существует! Введите другое имя', reply_markup=keyboard_markup)
             return
 
-    if check_name_for_except_chars(user_data['folder_name']):
+    if check_string_for_except_chars(user_data['folder_name']):
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data = 'folders_list')
         keyboard_markup.row(back_btn)
-        await message.reply(f'Название папки "{user_data["folder_name"]}" содержит недопустимые символы: {check_name_for_except_chars(user_data["folder_name"])}', reply_markup=keyboard_markup)
+        await message.reply(f'Название папки "{user_data["folder_name"]}" содержит недопустимые символы: {check_string_for_except_chars(user_data["folder_name"])}', reply_markup=keyboard_markup)
         return 
     
     await state.finish()
@@ -550,11 +429,11 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         await message.reply('Название сэмпла превышает 90 символов, введите другое имя', reply_markup=keyboard_markup)
         return
     
-    if check_name_for_except_chars(user_data["audio_sample_name"]):
+    if check_string_for_except_chars(user_data["audio_sample_name"]):
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data = get_selected_folder_name(message.chat.id))
         keyboard_markup.row(back_btn)
-        await message.reply(f'Название сэмпла "{user_data["audio_sample_name"]}" содержит недопустимые символы: {check_name_for_except_chars(audio_sample_name)}\nВведите другое имя', reply_markup=keyboard_markup)
+        await message.reply(f'Название сэмпла "{user_data["audio_sample_name"]}" содержит недопустимые символы: {check_string_for_except_chars(audio_sample_name)}\nВведите другое имя', reply_markup=keyboard_markup)
         return 
     
     for x in get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]:
@@ -574,7 +453,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         # Stage 1 : check audio files for integrity and convert them
         managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_audio_samples(audio_sample_full_name), path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"))
         # Stage 2 : mormalize audio
-        managment_msg = await normalize_audio(managment_msg, path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"), path_list.normalized_audio_samples(audio_sample_name + ".mp3"))
+        managment_msg = await audio_normalization(managment_msg, path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"), path_list.normalized_audio_samples(audio_sample_name + ".mp3"))
         # Stage 3 : analyze current audio sample hashes
         managment_msg = await analyze_audio_sample(managment_msg, path_list.normalized_audio_samples(audio_sample_name + ".mp3"), path_list.fingerprint_db())
         # Stage 4 : register current audio sample hashes
@@ -666,7 +545,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
     else:
         audio_sample_file_extensions =  "NULL"
     
-    random_str = get_random_string(32)
+    random_str = generate_random_string(32)
     query_audio_full_name= f"{random_str}{audio_sample_file_extensions}"
     query_audio_name = f"{random_str}"
     
@@ -684,7 +563,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         # Stage 1 : check audio files for integrity and convert them
         managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_query_audio(query_audio_full_name), path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
         # Stage 2 : mormalize audio
-        managment_msg = await normalize_audio(managment_msg, path_list.non_normalized_query_audio(query_audio_name + ".mp3"), path_list.normalized_query_audio(query_audio_name + ".mp3"))
+        managment_msg = await audio_normalization(managment_msg, path_list.non_normalized_query_audio(query_audio_name + ".mp3"), path_list.normalized_query_audio(query_audio_name + ".mp3"))
         # Stage 3 : match audio query
         managment_msg = await match_audio_query(managment_msg, path_list.normalized_query_audio(query_audio_name + ".mp3"), path_list.fingerprint_db())
     except:
@@ -716,7 +595,7 @@ async def process_help_command(message: types.Message):
 
 @dp.errors_handler(exception=BotBlocked)
 async def error_bot_blocked(update: types.Update, exception: BotBlocked):
-    print(f"Меня заблокировал пользователь!\nСообщение: {update}\nОшибка: {exception}")
+    logging.warning(f"Меня заблокировал пользователь!\nСообщение: {update}\nОшибка: {exception}")
     return True
 
 @dp.message_handler(content_types=types.ContentType.ANY, state='*')
