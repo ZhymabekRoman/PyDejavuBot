@@ -11,7 +11,6 @@ import shutil
 import sys
 import random
 import string
-import re
 import config
 import logging
 import asyncio
@@ -21,8 +20,8 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from other.py import generate_random_string, check_string_for_except_chars
-from backend.py import *
+from other import generate_random_string, check_string_for_except_chars
+from backend import *
 
 # Initalialization API token for work with Telegram Bot
 API_TOKEN = config.API_TOKEN
@@ -54,26 +53,31 @@ class Upload_Queries(StatesGroup):
     upload_query_step_3 = State()
 
 class get_path:
+    """Возвращяет путь к личным папкам пользывателей"""
+    
     def __init__(self, user_id):
         self.user_id = user_id
         self.user_folder = get_selected_folder_name(self.user_id)
-    def tmp_audio_samples(self, file = ""):
-        return f'data/audio_samples/tmp/{self.user_id}/{self.user_folder}/{file}'
-    def non_normalized_audio_samples(self, file = ""):
-        return f'data/audio_samples/non_normalized/{self.user_id}/{self.user_folder}/{file}'
-    def normalized_audio_samples(self, file = ""):
-        return f'data/audio_samples/normalized/{self.user_id}/{self.user_folder}/{file}'
+    
+    def tmp_audio_samples(self, file_name = ""):
+        return f'data/audio_samples/tmp/{self.user_id}/{self.user_folder}/{file_name}'
+    def non_normalized_audio_samples(self, file_name = ""):
+        return f'data/audio_samples/non_normalized/{self.user_id}/{self.user_folder}/{file_name}'
+    def normalized_audio_samples(self, file_name = ""):
+        return f'data/audio_samples/normalized/{self.user_id}/{self.user_folder}/{file_name}'
+
+    def tmp_query_audio(self, file_name = ""):
+        return f'data/query_samples/tmp/{self.user_id}/{self.user_folder}/{file_name}'
+    def non_normalized_query_audio(self, file_name = ""):
+        return f'data/query_samples/non_normalized/{self.user_id}/{self.user_folder}/{file_name}'
+    def normalized_query_audio(self, file_name = ""):
+        return f'data/query_samples/normalized/{self.user_id}/{self.user_folder}/{file_name}'
+    
     def fingerprint_db(self):
         return f'data/audio_samples/fingerprint_db/{self.user_id}/{self.user_folder}.fpdb'
     def fingerprint_db_dir_path(self):
         return f'data/audio_samples/fingerprint_db/{self.user_id}/'
-    def tmp_query_audio(self, file_name=""):
-        return f'data/query_samples/tmp/{self.user_id}/{self.user_folder}/{file_name}'
-    def non_normalized_query_audio(self, file_name=""):
-        return f'data/query_samples/non_normalized/{self.user_id}/{self.user_folder}/{file_name}'
-    def normalized_query_audio(self, file_name=""):
-        return f'data/query_samples/normalized/{self.user_id}/{self.user_folder}/{file_name}'
- 
+
 def b_get_text_in_lang(data):
 	lang_type = "En"
 	dict_miltilang = {
@@ -95,9 +99,9 @@ def set_selected_folder_name(user_id, set_name):
     global curent_folder_name
     curent_folder_name[user_id] = str(set_name)
 
-def unset_selected_folder_name(user_id, set_name):
+def unset_selected_folder_name(user_id):
     global curent_folder_name
-    curent_folder_name[user_id] = str(set_name)
+    curent_folder_name[user_id] = str("")
 
 def get_user_folders_list(user_id):
     db_worker = SQLighter(config.database_name)
@@ -118,11 +122,14 @@ def get_user_data(user_id):
     return db_data
 
 @dp.message_handler(commands=['start'], state='*')
-async def send_welcome(message: types.Message):
+async def start_cmd_message(message: types.Message):
+    # Проверяем на существование текущего пользывателя в БД
+    # Если не существует тогда регистрируем ID пользывателя в БД без указания языка интерфейса
     if get_user_data(message.chat.id) is None:
         db_worker = SQLighter(config.database_name)
         db_worker.create_empety_user_data(message.chat.id)
         db_worker.close()
+    # Получаем 
     db_worker = SQLighter(config.database_name)
     get_lang = db_worker.get_lang(message.chat.id)
     db_worker.close()
@@ -190,7 +197,7 @@ async def f_set_lang(message : types.Message, type_start= 'start' ):
         await message.edit_text("Please select your language:", reply_markup=keyboard_markup)
 
 async def f_folder_list(message : types.Message, type_start):
-    set_selected_folder_name(message.chat.id, "")
+    unset_selected_folder_name(message.chat.id)
     
     keyboard_markup = types.InlineKeyboardMarkup()
     create_new_folder_btn = types.InlineKeyboardButton('Создать новую папку 🗂', callback_data= 'create_new_folder')
@@ -287,20 +294,15 @@ async def manage_folder(message, folder_name, type_start = "edit"):
         
     get_sample_count = len(get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)])
     
+    msg_text = (f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\n\n"
+               f"Количество аудио сэмплов: {get_sample_count}\n"
+               f"Список аудио сэмлов :\n{samples_name}\n"
+               "Ваши действия - ")
+               
     if type_start == "edit":
-        await message.edit_text(
-                        f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\n\n"
-                        f"Количество аудио сэмплов: {get_sample_count}\n"
-                        f"Список аудио сэмлов :\n{samples_name}\n"
-                        "Ваши действия - ", 
-                        reply_markup=keyboard_markup)
+        await message.edit_text(msg_text, reply_markup=keyboard_markup)
     elif type_start == "start":
-        await message.answer(
-                        f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\n\n"
-                        f"Количество аудио сэмплов: {get_sample_count}\n"
-                        f"Список аудио сэмлов :\n{samples_name}\n"
-                        "Ваши действия - ",
-                        reply_markup=keyboard_markup)
+        await message.answer(msg_text, reply_markup=keyboard_markup)
 
 async def f_delete_folder_step_1(message):
     keyboard_markup = types.InlineKeyboardMarkup()

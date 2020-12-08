@@ -3,19 +3,14 @@ import os.path
 
 print("Config Master")
 
-if os.path.isfile("config.py") is True:
-    print("Файл конфигурации существует! Отмена ...")
+if os.path.isfile("config.py") or os.path.isfile(f"{db_name}.db") is True:
+    print("Файл конфигурации или базы данных существует! Отмена ...")
     exit()
 
 # Step 1 : database init 
 db_name = input("Укажите название db (default-myTable): ")
 
-if db_name == "":
-	db_name = "myTable"
-
-if os.path.isfile(f"{db_name}.db") is True:
-    print("Файл базы данных существует! Отмена ...")
-    exit()
+if db_name == "": db_name = "myTable"
 
 conn = sqlite3.connect(f"{db_name}.db")
 cur = conn.cursor()

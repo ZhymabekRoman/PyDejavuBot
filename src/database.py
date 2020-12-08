@@ -8,7 +8,7 @@
 
 import sqlite3
 import json
-from other.py import merge_two_dicts
+from other import merge_two_dicts
 
 class SQLighter:
 

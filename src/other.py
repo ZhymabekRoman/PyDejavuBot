@@ -5,6 +5,7 @@
 # Description ...: It stores codes that are not particularly relevant to bot health, but are vital
 # Author ........: ZhymabekRoman
 # ===============================================================================================================================
+import re
 
 # https://stackoverflow.com/a/26853961
 def merge_two_dicts(x, y):
@@ -21,7 +22,7 @@ def generate_random_string(length):
 
 # Не помню откуда взял этот код =)
 def check_string_for_except_chars(string):
-	"""Поверяет строку на недопустимые символы, в случае если будут то возвращяет словарь с присутсвующими запрещенными символами"""
+    """Поверяет строку на недопустимые символы, в случае если будут то возвращяет словарь с присутсвующими запрещенными символами"""
     exception_chars = '\\\/\|<>\?:"\*'
     find_exceptions = re.compile('([{}])'.format(exception_chars))
     return find_exceptions.findall(string)
