@@ -21,7 +21,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from other import generate_random_string, check_string_for_except_chars
-from backend import *
+# from backend import *              ### To Do
 
 # Initalialization API token for work with Telegram Bot
 API_TOKEN = config.API_TOKEN
@@ -126,6 +126,121 @@ def get_user_lang(user_id):
     db_data = db_worker.get_lang(user_id)
     db_worker.close()
     return db_data
+
+async def download_file(message, file_id, destination):
+    message_text = message.html_text + "\n\nЗагрузка файла..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
+    try:
+        await bot.download_file_by_id(file_id, destination)
+    except Exception as ex:
+        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
+        logging.exception(ex)
+        raise
+    else:
+        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
+    return managment_msg
+
+async def check_audio_integrity_and_convert(message, input_file, output_file):
+    message_text = message.html_text + "\n\nПроверка аудио файла на целостность и конвертируем в формат mp3 через ffmpeg..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
+    try:
+        cmd = ['ffmpeg', '-nostdin','-hide_banner', '-loglevel', 'panic', '-i', input_file,'-vn', output_file]
+        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await proc.communicate()
+        logging.info(f'[{cmd!r} exited with {proc.returncode}]')
+        logging.info(f'[stdout]\n{stdout.decode()}')
+        logging.info(f'[stderr]\n{stderr.decode()}')
+        if os.path.exists(output_file) is False or proc.returncode == 1:
+            raise
+    except Exception as ex:
+        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
+        logging.exception(ex)
+        raise
+    else:
+        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
+    return managment_msg
+
+async def audio_normalization(message, input_file, output_file):
+    message_text = message.html_text + "\n\nНормализация аудио..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
+    try:
+        cmd = ['ffmpeg-normalize', '-q', input_file, '-c:a', 'libmp3lame', '-o', output_file]
+        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await proc.communicate()
+        logging.info(f'[{cmd!r} exited with {proc.returncode}]')
+        logging.info(f'[stdout]\n{stdout.decode()}')
+        logging.info(f'[stderr]\n{stderr.decode()}')
+        if os.path.exists(output_file) is False or proc.returncode == 1:
+            raise
+    except Exception as ex:
+        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
+        logging.exception(ex)
+        raise
+    else:
+        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
+    return managment_msg
+
+async def analyze_audio_sample(message, input_file, fingerprint_db):
+    message_text = message.html_text + "\n\nРегистрируем аудио хэши в база данных..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
+    try:
+        if os.path.exists(fingerprint_db) is False:
+            db_hashes_add_method = 'new'
+        elif os.path.exists(fingerprint_db) is True:
+            db_hashes_add_method = 'add'
+        if config.audfprint_mode == '0':
+            cmd = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file, '-n', '120', '-X', '-F', '18']
+        elif config.audfprint_mode == '1':
+            cmd = ['python3', 'library/audfprint-master/audfprint.py', db_hashes_add_method, '-d', fingerprint_db, input_file]
+        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await proc.communicate()
+        logging.info(f'[{cmd!r} exited with {proc.returncode}]')
+        logging.info(f'[stdout]\n{stdout.decode()}')
+        logging.info(f'[stderr]\n{stderr.decode()}')
+        if os.path.exists(fingerprint_db) is False or proc.returncode == 1:
+            raise
+    except Exception as ex:
+        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
+        logging.exception(ex)
+        raise
+    else:
+        managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
+    return managment_msg
+    
+async def match_audio_query(message, input_file, fingerprint_db):
+    message_text = message.html_text + "\n\nИщем аудио хэши в базе данных..."
+    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
+    try:
+        if config.audfprint_mode == '0':
+            cmd = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file, '-n', '120', '-D', '2000', '-X', '-F', '18']
+        elif config.audfprint_mode == '1':
+            cmd = ['python3', 'library/audfprint-master/audfprint.py', 'match', '-d', fingerprint_db, input_file]
+        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await proc.communicate()
+        logging.info(f'[{cmd!r} exited with {proc.returncode}]')
+        logging.info(f'[stdout]\n{stdout.decode()}')
+        logging.info(f'[stderr]\n{stderr.decode()}')
+        if os.path.exists(fingerprint_db) is False or proc.returncode == 1:
+            raise
+    except Exception as ex:
+        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
+        logging.exception(ex)
+        raise
+    else:
+        managment_msg = await message.edit_text(message_text + f" Готово ✅\n\nРезультат:\n<code>{stdout.decode()}</code>\n", parse_mode="HTML")
+    return managment_msg
+
+async def delete_audio_hashes(message, fingerprint_db, sample_name):
+    try:
+        cmd = ['python3', 'library/audfprint-master/audfprint.py', 'remove', '-d', fingerprint_db, sample_name, '-H', '2']
+        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await proc.communicate()
+        logging.info(f'[{cmd!r} exited with {proc.returncode}]')
+        logging.info(f'[stdout]\n{stdout.decode()}')
+        logging.info(f'[stderr]\n{stderr.decode()}')
+    except Exception as ex:
+        pass
+
 
 @dp.message_handler(commands=['start'], state='*')
 async def start_cmd_message(message: types.Message):
