@@ -5,6 +5,8 @@
 # Description ...: Is designed to work with the backend functions (file download, audio normalization, audio integrety check and etc)
 # Author ........: ZhymabekRoman
 # ===============================================================================================================================
+import logging
+import main
 
 async def download_file(message, file_id, destination):
     message_text = message.html_text + "\n\nЗагрузка файла..."

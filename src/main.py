@@ -30,8 +30,8 @@ API_TOKEN = config.API_TOKEN
 memory_storage = MemoryStorage()  ### TODO - Redis storage
 
 # Configure logging
-# logging.basicConfig(level=logging.INFO)
-logging.basicConfig(level=logging.DEBUG) 
+logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.DEBUG) 
 
 # Initialize bot and dispatcher
 bot = Bot(token=API_TOKEN)
@@ -466,7 +466,8 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         db_worker = SQLighter(config.database_name)
         db_worker.register_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data["audio_sample_name"], user_data["audio_sample_file_info"].file_unique_id)
         db_worker.close()
-    except:
+    except Exception as ex:
+        logging.exception(ex)
         await folder_list_menu_message(message, 'start')
         return
     else:
