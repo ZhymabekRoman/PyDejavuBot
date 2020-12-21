@@ -252,7 +252,7 @@ async def start_cmd_message(message: types.Message):
         db_worker.close()
     # Проверка языка интерфейса в БД
     # Если не существует тогда посылвает юзеру сообщение о выборе языка
-    if get_user_lang(message.chat.id) is None:
+    if not get_user_lang(message.chat.id):
         await set_lang_message(message, 'start')
     else:
         await main_menu_message(message, 'reply')
