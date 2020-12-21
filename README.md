@@ -35,9 +35,14 @@ pip3 install -r requirements.txt
 cd src/
 python3 first_start.py
 ```
-and answer the script's questions.
+and answer to the script's questions.
 
-5) Launching the bot:
+5) On some Debian distributions, you may need to add the ~/.local/bin folder to PATH variable, since pip installs some libraries there:
+```
+echo export PATH=~/.local/bin:$PATH >> ~/.bashrc
+```
+
+6) Launching the bot:
 ```
 python3 main.py
 ```
