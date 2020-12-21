@@ -51,7 +51,7 @@ class Upload_Queries(StatesGroup):
     step_3 = State()
 
 class get_path:
-    """Возвращяет путь к личным папкам пользывателей, а-ля конструктор"""
+    """Возвращяет путь к личным папкам пользывателей, а-ля конструктор путей"""
     
     def __init__(self, user_id):
         self.user_id = user_id
@@ -492,6 +492,7 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
         
     user_data = await state.get_data()
     
+    # TODO: bypass file size limit
 #    if int(user_data["audio_sample_file_info"].file_size) >= 20871520:
 #        keyboard_markup = types.InlineKeyboardMarkup()
 #        back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
@@ -672,6 +673,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
     ### Todo !
     if audio_sample_file_extensions not in ('.ogg'):
         await message.reply('Что-то пошло не так. Код ошибки : mime_query_audio_error')
+        await folder_list_menu_message(message, 'start')
         return
     
     await state.finish()
