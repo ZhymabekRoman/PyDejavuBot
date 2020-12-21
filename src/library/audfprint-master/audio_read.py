@@ -57,15 +57,14 @@ def audio_read(filename, sr=None, channels=None):
     """Read a soundfile, return (d, sr)."""
     if HAVE_FFMPEG:
         return audio_read_ffmpeg(filename, sr, channels)
-    else:
-        data, samplerate = wavread(filename)
-        if channels == 1 and len(data.shape) == 2 and data.shape[-1] != 1:
-            # Convert stereo to mono.
-            data = np.mean(data, axis=-1)
-        if sr and sr != samplerate:
-            raise ValueError("Wav file has samplerate %f but %f requested." % (
-                samplerate, sr))
-        return data, samplerate
+    data, samplerate = wavread(filename)
+    if channels == 1 and len(data.shape) == 2 and data.shape[-1] != 1:
+        # Convert stereo to mono.
+        data = np.mean(data, axis=-1)
+    if sr and sr != samplerate:
+        raise ValueError("Wav file has samplerate %f but %f requested." % (
+            samplerate, sr))
+    return data, samplerate
 
 
 def audio_read_ffmpeg(filename, sr=None, channels=None):
@@ -248,10 +247,9 @@ class FFmpegAudioFile(object):
                         raise ValueError('ffmpeg output: {}'.format(
                                 ''.join(self.stderr_reader.queue.queue)
                         ))
-                    else:
-                        start_time = end_time
-                        # Keep waiting.
-                        continue
+                    start_time = end_time
+                    # Keep waiting.
+                    continue
 
     def _get_info(self):
         """Reads the tool's output from its stderr stream, extracts the

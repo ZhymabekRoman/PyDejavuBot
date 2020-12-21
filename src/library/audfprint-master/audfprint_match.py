@@ -345,11 +345,10 @@ class Matcher(object):
 
         if hashesfor is None:
             return results
-        else:
-            id = results[hashesfor, 0]
-            mode = results[hashesfor, 2]
-            hashesforhashes = self._unique_match_hashes(id, hits, mode)
-            return results, hashesforhashes
+        id = results[hashesfor, 0]
+        mode = results[hashesfor, 2]
+        hashesforhashes = self._unique_match_hashes(id, hits, mode)
+        return results, hashesforhashes
 
     def match_file(self, analyzer, ht, filename, number=None):
         """ Read in an audio file, calculate its landmarks, query against
@@ -364,14 +363,10 @@ class Matcher(object):
         else:
             durd = analyzer.n_hop * q_hashes[-1][0] / analyzer.target_sr
         if self.verbose:
-            if number is not None:
-                numberstring = "#%d" % number
-            else:
-                numberstring = ""
-            pass
-            #print(time.ctime(), "Analyzed", numberstring, filename, "of",
-             #     ('%.3f' % durd), "s "
-              #                     "to", len(q_hashes), "hashes")
+            numberstring = "#%d" % number if number is not None else ""
+                #print(time.ctime(), "Analyzed", numberstring, filename, "of",
+                 #     ('%.3f' % durd), "s "
+                  #                     "to", len(q_hashes), "hashes")
         # Run query
         rslts = self.match_hashes(ht, q_hashes)
         # Post filtering

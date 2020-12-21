@@ -81,13 +81,8 @@ def file_precompute_peaks_or_hashes(analyzer, filename, precompdir,
     # Form the output filename to check if it exists.
     # strip relative directory components from file name
     # Also remove leading absolute path (comp == '')
-    relname = '/'.join(
-        [
-            comp
-            for comp in tail_filename.split('/')
-            if comp not in ['.', '..', '']
-        ]
-    )
+    relname = '/'.join(comp for comp in tail_filename.split('/')
+                if comp not in ['.', '..', ''])
 
     root = os.path.splitext(relname)[0]
     if precompext is None:
@@ -98,27 +93,26 @@ def file_precompute_peaks_or_hashes(analyzer, filename, precompdir,
     opfname = os.path.join(precompdir, root + precompext)
     if skip_existing and os.path.isfile(opfname):
         return ["file " + opfname + " exists (and --skip-existing); skipping"]
+    # Do the analysis
+    if hashes_not_peaks:
+        type = "hashes"
+        saver = audfprint_analyze.hashes_save
+        output = analyzer.wavfile2hashes(filename)
     else:
-        # Do the analysis
-        if hashes_not_peaks:
-            type = "hashes"
-            saver = audfprint_analyze.hashes_save
-            output = analyzer.wavfile2hashes(filename)
-        else:
-            type = "peaks"
-            saver = audfprint_analyze.peaks_save
-            output = analyzer.wavfile2peaks(filename)
-        # save the hashes or peaks file
-        if len(output) == 0:
-            message = "Zero length analysis for " + filename + " -- not saving."
-        else:
-            # Make sure the output directory exists
-            ensure_dir(os.path.split(opfname)[0])
-            # Write the file
-            saver(opfname, output)
-            message = ("wrote " + opfname + " ( %d %s, %.3f sec)"
-                       % (len(output), type, analyzer.soundfiledur))
-        return [message]
+        type = "peaks"
+        saver = audfprint_analyze.peaks_save
+        output = analyzer.wavfile2peaks(filename)
+    # save the hashes or peaks file
+    if len(output) == 0:
+        message = "Zero length analysis for " + filename + " -- not saving."
+    else:
+        # Make sure the output directory exists
+        ensure_dir(os.path.split(opfname)[0])
+        # Write the file
+        saver(opfname, output)
+        message = ("wrote " + opfname + " ( %d %s, %.3f sec)"
+                   % (len(output), type, analyzer.soundfiledur))
+    return [message]
 
 
 def file_precompute(analyzer, filename, precompdir, type='peaks', skip_existing=False, strip_prefix=None):
@@ -333,7 +327,7 @@ def setup_reporter(args):
     else:
         def report(msglist):
             """Log messages by printing to stdout"""
-            for msg in msglist:
+            for _ in msglist:
                 #print(msg)
                 pass
     return report

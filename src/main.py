@@ -394,7 +394,7 @@ async def f_step_2(message: types.Message, state: FSMContext):
 
 async def manage_folder_menu_message(message, folder_name, type_start = "edit"):
     set_selected_folder_name(message.chat.id, folder_name)
-    
+
     keyboard_markup = types.InlineKeyboardMarkup()
     upload_audio_samples_btn = types.InlineKeyboardButton('Загрузить аудио сэмплы', callback_data= 'upload_audio_samples')
     keyboard_markup.row(upload_audio_samples_btn)
@@ -406,18 +406,24 @@ async def manage_folder_menu_message(message, folder_name, type_start = "edit"):
     keyboard_markup.row(delete_btn)
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'folders_list')
     keyboard_markup.row(back_btn)
-    
-    samples_name = ""
-    for i, b in enumerate(get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)], 1):
-        samples_name += str(f"{i}) {b}\n")
-        
+
+    samples_name = "".join(
+        str(f"{i}) {b}\n")
+        for i, b in enumerate(
+            get_user_folders_list(message.chat.id)[
+                get_selected_folder_name(message.chat.id)
+            ],
+            1,
+        )
+    )
+
     get_sample_count = len(get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)])
-    
+
     msg_text = (f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\n\n"
                f"Количество аудио сэмплов: {get_sample_count}\n"
                f"Список аудио сэмлов :\n{samples_name}\n"
                "Ваши действия - ")
-               
+
     if type_start == "edit":
         await message.edit_text(msg_text, reply_markup=keyboard_markup)
     elif type_start == "start":
