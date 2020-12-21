@@ -9,7 +9,6 @@
 import os
 import shutil
 import sys
-import random
 import config
 import logging
 import asyncio
