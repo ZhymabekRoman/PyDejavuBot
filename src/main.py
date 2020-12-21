@@ -10,7 +10,6 @@ import os
 import shutil
 import sys
 import random
-import string
 import config
 import logging
 import asyncio
