@@ -76,16 +76,6 @@ class get_path:
     def fingerprint_db_dir_path(self):
         return f'data/audio_samples/fingerprint_db/{self.user_id}/'
 
-def b_get_text_in_lang(data):
-	lang_type = "En"
-	dict_miltilang = {
-	    '1' : {'Ru' : '🎛️ Настройки : Выбран русский язык 🇷🇺',
-	             'En' : "🎛️ Setings : Selected English 🇺🇸 language!"},
-	    '2' : {'Ru' : 'Настройки ⚙️',
-	             'En' : 'Settings ⚙️'}
-	}
-	return dict_miltilang[data][lang_type]
-
 curent_folder_name = {}
 
 ### CRITICAL TODO №1 - DON'T USE GLOBAL VARIABLES
@@ -125,14 +115,18 @@ def get_user_lang(user_id):
     db_worker.close()
     return db_data
 
-async def download_file(message, file_id, destination):
+async def error_message(message) -> types.Message:
+    message_text = message.html_text + " Критическая ошибка, отмена..."
+    managment_msg = await message.edit_text(message_text, parse_mode="HTML")
+    return managment_msg
+
+async def download_file(message, file_id, destination) -> types.Message:
     message_text = message.html_text + "\n\nЗагрузка файла..."
-    await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
+    managment_msg = await message.edit_text(message_text + " Выполняем...", parse_mode="HTML")
     try:
         await bot.download_file_by_id(file_id, destination)
     except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
+        await error_message(managment_msg)
         raise
     else:
         managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
@@ -151,8 +145,6 @@ async def check_audio_integrity_and_convert(message, input_file, output_file):
         if os.path.exists(output_file) is False or proc.returncode == 1:
             raise
     except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
         raise
     else:
         managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
@@ -171,8 +163,6 @@ async def audio_normalization(message, input_file, output_file):
         if os.path.exists(output_file) is False or proc.returncode == 1:
             raise
     except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
         raise
     else:
         managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
@@ -198,8 +188,6 @@ async def analyze_audio_sample(message, input_file, fingerprint_db):
         if os.path.exists(fingerprint_db) is False or proc.returncode == 1:
             raise
     except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
         raise
     else:
         managment_msg = await message.edit_text(message_text + " Готово ✅", parse_mode="HTML")
@@ -221,8 +209,6 @@ async def match_audio_query(message, input_file, fingerprint_db):
         if os.path.exists(fingerprint_db) is False or proc.returncode == 1:
             raise
     except Exception as ex:
-        managment_msg = await message.edit_text(message_text + " Критическая ошибка, отмена...", parse_mode="HTML")
-        logging.exception(ex)
         raise
     else:
         managment_msg = await message.edit_text(message_text + f" Готово ✅\n\nРезультат:\n<code>{stdout.decode()}</code>\n", parse_mode="HTML")
@@ -255,19 +241,18 @@ async def start_cmd_message(message: types.Message):
     else:
         await main_menu_message(message, 'reply')
 
-@dp.callback_query_handler(lambda c: c.data == 'bot_settings_message')
+@dp.callback_query_handler(text='bot_settings_message')
 async def bot_settings_message(callback_query: types.CallbackQuery):
-    await bot.answer_callback_query(callback_query.id)
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
     lang_btn = types.InlineKeyboardButton(f'Язык интерфейса : {get_user_data(callback_query.message.chat.id)[1]}', callback_data= 'edit_lang')
     keyboard_markup.row(lang_btn)
     keyboard_markup.row(back_btn)
     await callback_query.message.edit_text("Настройки бота:", reply_markup=keyboard_markup)
-
-@dp.callback_query_handler(lambda c: c.data == 'about_bot_message')
-async def about_bot_message(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
+
+@dp.callback_query_handler(text='about_bot_message')
+async def about_bot_message(callback_query: types.CallbackQuery):
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
     keyboard_markup.row(back_btn)
@@ -276,7 +261,8 @@ async def about_bot_message(callback_query: types.CallbackQuery):
         "Разработчик ботка : @Zhymabek_Roman\n"
         "Тех.поддержка : @Zhymabek_Roman", 
         reply_markup=keyboard_markup)
-    
+    await bot.answer_callback_query(callback_query.id)
+
 async def quiz_mode_step_0(message: types.Message):
     keyboard_markup = types.InlineKeyboardMarkup()
     for folder_name in get_user_folders_list(message.chat.id):
@@ -302,7 +288,7 @@ async def main_menu_message(message: types.Message, type_start):
     elif type_start == 'reply':
         await message.reply("Главное меню : ", reply_markup=keyboard_markup)
 
-async def set_lang_message(message : types.Message, type_start= 'start' ):
+async def set_lang_message(message: types.Message, type_start= 'start' ):
     keyboard_markup = types.InlineKeyboardMarkup()
     set_en_lang_btns = types.InlineKeyboardButton('English 🇺🇸', callback_data= 'set_lang-en')
     set_ru_lang_btns = types.InlineKeyboardButton('Russian 🇷🇺', callback_data= 'set_lang-ru')
@@ -313,7 +299,7 @@ async def set_lang_message(message : types.Message, type_start= 'start' ):
     elif type_start == 'edit':
         await message.edit_text("Please select your language:", reply_markup=keyboard_markup)
 
-async def folder_list_menu_message(message : types.Message, type_start):
+async def folder_list_menu_message(message: types.Message, type_start):
     unset_selected_folder_name(message.chat.id)
     
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -421,7 +407,7 @@ async def manage_folder_menu_message(message, folder_name, type_start = "edit"):
     elif type_start == "start":
         await message.answer(msg_text, reply_markup=keyboard_markup)
 
-async def f_delete_folder_step_1(message):
+async def f_delete_folder_step_1(message: types.Message):
     keyboard_markup = types.InlineKeyboardMarkup()
     delete_btn = types.InlineKeyboardButton('Да!', callback_data= 'process_to_delete_folder')
     back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
@@ -434,7 +420,7 @@ async def f_delete_folder_step_1(message):
                     parse_mode="HTML",
                     reply_markup=keyboard_markup)
 
-@dp.callback_query_handler(lambda c: c.data == 'process_to_delete_folder')
+@dp.callback_query_handler(text='process_to_delete_folder')
 async def f_delete_folder_step_2(callback_query: types.CallbackQuery):
     path_list = get_path(callback_query.message.chat.id)
     ### Todo !
