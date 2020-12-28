@@ -8,12 +8,12 @@
 
 import os
 import shutil
-import sys
 import config
 import logging
 import asyncio
 from database import SQLighter
-from aiogram.utils.exceptions import BotBlocked
+from aiogram.utils.callback_data import CallbackData
+from aiogram.utils.exceptions import BotBlocked, MessageNotModified
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
@@ -34,6 +34,13 @@ logging.basicConfig(level=logging.INFO)
 # Initialize bot and dispatcher
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=memory_storage)
+
+set_language = CallbackData("language_settings", "language_code")
+AVAILABLE_LANGUAGES = {
+        "En": {'flag': "🇺🇸", 'name': "English"},
+        "Ru": {'flag': "🇷🇺", 'name': "Русский"},
+        "Uk": {'flag': "🇺🇦", 'name': "Українська"}
+    }
 
 class Create_Folders(StatesGroup):
     step_1 = State()
@@ -92,29 +99,35 @@ def unset_selected_folder_name(user_id):
     curent_folder_name[user_id] = str("")
 
 def get_user_folders_list(user_id):
-    db_worker = SQLighter(config.database_name)
+    db_worker = SQLighter(config.DATABASE_NAME)
     db_data = db_worker.select_user_folders_list(user_id)
     db_worker.close()
     return db_data
     
 def get_user_folders_count(user_id):
-    db_worker = SQLighter(config.database_name)
-    db_data = db_worker.select_user_folders_count(user_id)
+    db_worker = SQLighter(config.DATABASE_NAME)
+    db_data = db_worker.user_folders_count(user_id)
     db_worker.close()
     return db_data
 
 def get_user_data(user_id):
-    db_worker = SQLighter(config.database_name)
+    db_worker = SQLighter(config.DATABASE_NAME)
     db_data = db_worker.select_user_data(user_id)
+    db_worker.close()
+    return db_data
+    
+def get_user_audio_samples_list(user_id, folder_name):
+    db_worker = SQLighter(config.DATABASE_NAME)
+    db_data = db_worker.select_user_audio_samples_list(user_id, folder_name)
     db_worker.close()
     return db_data
 
 def get_user_lang(user_id):
-    db_worker = SQLighter(config.database_name)
-    db_data = db_worker.get_lang(user_id)
+    db_worker = SQLighter(config.DATABASE_NAME)
+    db_data = db_worker.get_user_lang(user_id)
     db_worker.close()
     return db_data
-
+    
 async def error_message(message) -> types.Message:
     message_text = message.html_text + " Критическая ошибка, отмена..."
     managment_msg = await message.edit_text(message_text, parse_mode="HTML")
@@ -230,28 +243,29 @@ async def delete_audio_hashes(message, fingerprint_db, sample_name):
 async def start_cmd_message(message: types.Message):
     # Проверяем на существование текущего пользывателя в БД
     # Если не существует тогда регистрируем ID пользывателя в БД без указания языка интерфейса
+    logging.info(message)
     if get_user_data(message.chat.id) is None:
-        db_worker = SQLighter(config.database_name)
-        db_worker.create_empety_user_data(message.chat.id)
+        db_worker = SQLighter(config.DATABASE_NAME)
+        db_worker.create_empety_user_data(message.chat.id, message.from_user.username)
         db_worker.close()
     # Проверка языка интерфейса в БД
     # Если не существует тогда посылвает юзеру сообщение о выборе языка
     if not get_user_lang(message.chat.id):
-        await set_lang_message(message, 'start')
+        await language_settings_message(message, 'start')
     else:
         await main_menu_message(message, 'reply')
 
-@dp.callback_query_handler(text='bot_settings_message')
+@dp.callback_query_handler(lambda c: c.data == 'bot_settings_message')
 async def bot_settings_message(callback_query: types.CallbackQuery):
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
-    lang_btn = types.InlineKeyboardButton(f'Язык интерфейса : {get_user_data(callback_query.message.chat.id)[1]}', callback_data= 'edit_lang')
+    lang_btn = types.InlineKeyboardButton(f'Язык интерфейса : {get_user_lang(callback_query.message.chat.id)}', callback_data= 'edit_lang')
     keyboard_markup.row(lang_btn)
     keyboard_markup.row(back_btn)
     await callback_query.message.edit_text("Настройки бота:", reply_markup=keyboard_markup)
     await bot.answer_callback_query(callback_query.id)
 
-@dp.callback_query_handler(text='about_bot_message')
+@dp.callback_query_handler(lambda c: c.data == 'about_bot_message')
 async def about_bot_message(callback_query: types.CallbackQuery):
     keyboard_markup = types.InlineKeyboardMarkup()
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
@@ -266,7 +280,7 @@ async def about_bot_message(callback_query: types.CallbackQuery):
 async def quiz_mode_step_0(message: types.Message):
     keyboard_markup = types.InlineKeyboardMarkup()
     for folder_name in get_user_folders_list(message.chat.id):
-        get_sample_count = len(get_user_folders_list(message.chat.id)[folder_name])
+        get_sample_count = len(get_user_audio_samples_list(message.chat.id, folder_name))
         folder_btn = types.InlineKeyboardButton(f"{folder_name} ({get_sample_count})", callback_data = "set_" + folder_name)
         keyboard_markup.row(folder_btn)
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
@@ -274,7 +288,7 @@ async def quiz_mode_step_0(message: types.Message):
     await message.edit_text("Выберите папку : ", reply_markup=keyboard_markup)   
     await Create_Folders.step_2.set()
     
-async def main_menu_message(message: types.Message, type_start):
+async def main_menu_message(message: types.Message, messaging_type):
     keyboard_markup = types.InlineKeyboardMarkup()
     folder_list_btns = types.InlineKeyboardButton('Папки 📂', callback_data= 'folders_list')
     about_btns = types.InlineKeyboardButton('О боте 🤖', callback_data= 'about_bot_message')
@@ -283,23 +297,33 @@ async def main_menu_message(message: types.Message, type_start):
     keyboard_markup.row(folder_list_btns)
     keyboard_markup.row(about_btns, setings_btns)
     keyboard_markup.row(quiz_mode_btn)
-    if type_start == 'edit':
+    if messaging_type == 'edit':
         await message.edit_text("Главное меню : ", reply_markup=keyboard_markup)
-    elif type_start == 'reply':
+    elif messaging_type == 'reply':
         await message.reply("Главное меню : ", reply_markup=keyboard_markup)
 
-async def set_lang_message(message: types.Message, type_start= 'start' ):
-    keyboard_markup = types.InlineKeyboardMarkup()
-    set_en_lang_btns = types.InlineKeyboardButton('English 🇺🇸', callback_data= 'set_lang-en')
-    set_ru_lang_btns = types.InlineKeyboardButton('Russian 🇷🇺', callback_data= 'set_lang-ru')
-    set_kz_lang_btns = types.InlineKeyboardButton('Kazakh 🇰🇿', callback_data= 'set_lang-kz')
-    keyboard_markup.row(set_ru_lang_btns, set_en_lang_btns, set_kz_lang_btns)
-    if type_start == 'start':
-        await message.reply("Please select your language:", reply_markup=keyboard_markup)
-    elif type_start == 'edit':
-        await message.edit_text("Please select your language:", reply_markup=keyboard_markup)
+async def language_settings_message(message: types.Message, messaging_type= 'start'):
+    keyboard = types.InlineKeyboardMarkup()
+    for lang_code, lang_info in AVAILABLE_LANGUAGES.items():
+        language_label = f"{lang_info['flag']} {lang_info['name']}"
+        button = types.InlineKeyboardButton(text=language_label, callback_data=set_language.new(language_code=lang_code))
+        keyboard.add(button)
+    message_text = "Please select your language:"
+    if messaging_type == 'start':
+        await message.reply(message_text, reply_markup=keyboard)
+    elif messaging_type == 'edit':
+        await message.edit_text(message_text, reply_markup=keyboard)
 
-async def folder_list_menu_message(message: types.Message, type_start):
+    
+@dp.callback_query_handler(set_language.filter())
+async def set_language_message(call: types.CallbackQuery, callback_data: dict):
+    db_worker = SQLighter(config.DATABASE_NAME)
+    db_worker.set_user_lang(call.message.chat.id, callback_data['language_code'])
+    db_worker.close()
+    await call.answer(f"🎚Настройки : Выбран {callback_data['language_code']} язык!")
+    await main_menu_message(call.message, 'edit')
+
+async def folder_list_menu_message(message: types.Message, messaging_type):
     unset_selected_folder_name(message.chat.id)
     
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -307,16 +331,16 @@ async def folder_list_menu_message(message: types.Message, type_start):
     keyboard_markup.row(create_new_folder_btn)
     
     for folder_name in get_user_folders_list(message.chat.id):
-        get_sample_count = len(get_user_folders_list(message.chat.id)[folder_name])
+        get_sample_count = len(get_user_audio_samples_list(message.chat.id, folder_name))
         folder_btn = types.InlineKeyboardButton(f"{folder_name} ({get_sample_count})", callback_data= folder_name)
         keyboard_markup.row(folder_btn)
  
     back_btn = types.InlineKeyboardButton('«      ', callback_data= 'welcome_message')
     keyboard_markup.row(back_btn)
     
-    if type_start == 'start':
+    if messaging_type == 'start':
         await message.answer(f"Менеджер папок :\n\nОбщее количество папок: {get_user_folders_count(message.chat.id)}", reply_markup=keyboard_markup)
-    elif type_start == 'edit':
+    elif messaging_type == 'edit':
         await message.edit_text(f"Менеджер папок :\n\nОбщее количество папок: {get_user_folders_count(message.chat.id)}", reply_markup=keyboard_markup)
     
 @dp.message_handler(state = Create_Folders.step_1, content_types=types.ContentTypes.TEXT)
@@ -332,7 +356,7 @@ async def f_step_2(message: types.Message, state: FSMContext):
     await state.update_data(folder_name=message.text)
     user_data = await state.get_data()
     
-    if len(user_data['folder_name']) >=  20:
+    if len(user_data['folder_name']) >= 20:
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data = 'folders_list')
         keyboard_markup.row(back_btn)
@@ -369,14 +393,14 @@ async def f_step_2(message: types.Message, state: FSMContext):
     except:
         pass
     
-    db_worker = SQLighter(config.database_name)
+    db_worker = SQLighter(config.DATABASE_NAME)
     db_worker.create_folder(message.chat.id, user_data['folder_name'])
     db_worker.close()
     
     await message.reply(f'Папка "{user_data["folder_name"]}" создана!')
     await folder_list_menu_message(message, 'start') 
 
-async def manage_folder_menu_message(message, folder_name, type_start = "edit"):
+async def manage_folder_menu_message(message, folder_name, messaging_type = "edit"):
     set_selected_folder_name(message.chat.id, folder_name)
     
     keyboard_markup = types.InlineKeyboardMarkup()
@@ -392,19 +416,19 @@ async def manage_folder_menu_message(message, folder_name, type_start = "edit"):
     keyboard_markup.row(back_btn)
     
     samples_name = ""
-    for i, b in enumerate(get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)], 1):
+    for i, b in enumerate(get_user_audio_samples_list(message.chat.id, get_selected_folder_name(message.chat.id)), 1):
         samples_name += str(f"{i}) {b}\n")
         
-    get_sample_count = len(get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)])
+    get_sample_count = len(get_user_audio_samples_list(message.chat.id, get_selected_folder_name(message.chat.id)))
     
     msg_text = (f"Вы работаете с папкой : {get_selected_folder_name(message.chat.id)}\n\n"
                f"Количество аудио сэмплов: {get_sample_count}\n"
                f"Список аудио сэмлов :\n{samples_name}\n"
                "Ваши действия - ")
                
-    if type_start == "edit":
+    if messaging_type == "edit":
         await message.edit_text(msg_text, reply_markup=keyboard_markup)
-    elif type_start == "start":
+    elif messaging_type == "start":
         await message.answer(msg_text, reply_markup=keyboard_markup)
 
 async def f_delete_folder_step_1(message: types.Message):
@@ -437,12 +461,12 @@ async def f_delete_folder_step_2(callback_query: types.CallbackQuery):
     except:
         pass
     finally:
-        db_worker = SQLighter(config.database_name)
+        db_worker = SQLighter(config.DATABASE_NAME)
         db_worker.unregister_all_audio_sample(callback_query.message.chat.id, get_selected_folder_name(callback_query.message.chat.id))
         db_worker.delete_folder(callback_query.message.chat.id, get_selected_folder_name(callback_query.message.chat.id))
         db_worker.close()
-        await callback_query.message.edit_text(f'Папка "{get_selected_folder_name(callback_query.message.chat.id)}" удалена!')
-        await folder_list_menu_message(callback_query.message, 'start')
+    await callback_query.message.edit_text(f'Папка "{get_selected_folder_name(callback_query.message.chat.id)}" удалена!')
+    await folder_list_menu_message(callback_query.message, 'start')
     
 @dp.message_handler(state = Upload_Simples.step_1)
 async def f_upload_audio_samples_step_1(message):
@@ -467,14 +491,12 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
 
     if user_data["audio_sample_content_type"] == "document":
         await state.update_data(audio_sample_file_info=user_data["audio_sample_message"].document)
-        name_file = user_data["audio_sample_message"].document.file_name
-        await state.update_data(audio_sample_file_name =  os.path.splitext(name_file)[0])
-        await state.update_data(audio_sample_file_extensions =  os.path.splitext(name_file)[1])
     elif user_data["audio_sample_content_type"] == "audio":
         await state.update_data(audio_sample_file_info=user_data["audio_sample_message"].audio)
-        name_file = user_data["audio_sample_message"].audio.file_name ### New in Bot API 5.0
-        await state.update_data(audio_sample_file_name =  os.path.splitext(name_file)[0])
-        await state.update_data(audio_sample_file_extensions =  os.path.splitext(name_file)[1])
+   
+    name_file = user_data["audio_sample_message"].file_name
+    await state.update_data(audio_sample_file_name=os.path.splitext(name_file)[0])
+    await state.update_data(audio_sample_file_extensions=os.path.splitext(name_file)[1])
         
     user_data = await state.get_data()
     
@@ -485,16 +507,18 @@ async def f_upload_audio_samples_step_2(message: types.Message, state: FSMContex
 #        keyboard_markup.row(back_btn)
 #        await message.reply('Размер файла превышает 20 mb. Отправьте другой файл', reply_markup=keyboard_markup)
 #        return
-        
+    
     ### Проверка на загруженность файла в текущей папки через db
     file_unique_id = user_data["audio_sample_file_info"].file_unique_id
-    for d_file_name, d_file_id in get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)].items():
-        if d_file_id == file_unique_id:
-            keyboard_markup = types.InlineKeyboardMarkup()
-            back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
-            keyboard_markup.row(back_btn)
-            await message.reply(f'В папке "{get_selected_folder_name(message.chat.id)}" этот аудио сэмпл уже существует под названием "{d_file_name}"\nОтправьте другой файл', reply_markup=keyboard_markup)
-            return
+    db_worker = SQLighter(config.DATABASE_NAME)
+    db_audio_sample_unique_name = db_worker.check_audio_sample_with_same_file_id_in_folder(message.chat.id, get_selected_folder_name(message.chat.id), file_unique_id)
+    db_worker.close()
+    if db_audio_sample_unique_name:
+        keyboard_markup = types.InlineKeyboardMarkup()
+        back_btn = types.InlineKeyboardButton('«      ', callback_data= get_selected_folder_name(message.chat.id))
+        keyboard_markup.row(back_btn)
+        await message.reply(f'В папке "{get_selected_folder_name(message.chat.id)}" этот аудио сэмпл уже существует под названием "{db_audio_sample_unique_name[0]}"\nОтправьте другой файл', reply_markup=keyboard_markup)
+        return
      
     if user_data["audio_sample_file_extensions"].lower() in ('.aac','.wav', '.mp3', '.wma', '.ogg', '.flac'):
         await Upload_Simples.step_3.set()
@@ -528,7 +552,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     audio_sample_full_name = f'{user_data["audio_sample_name"]}{user_data["audio_sample_file_extensions"]}'
     path_list = get_path(message.chat.id)
             
-    if len(str(user_data["audio_sample_name"])) >= 90:
+    if len(user_data["audio_sample_name"]) >= 90:
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data = get_selected_folder_name(message.chat.id))
         keyboard_markup.row(back_btn)
@@ -542,7 +566,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         await message.reply(f'Название сэмпла "{user_data["audio_sample_name"]}" содержит недопустимые символы: {check_string_for_except_chars(audio_sample_name)}\nВведите другое имя', reply_markup=keyboard_markup)
         return 
     
-    for x in get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]:
+    for x in get_user_audio_samples_list(message.chat.id, get_selected_folder_name(message.chat.id)):
         if str(user_data["audio_sample_name"]).lower() == str(x).lower():
             keyboard_markup = types.InlineKeyboardMarkup()
             back_btn = types.InlineKeyboardButton('«      ', callback_data = get_selected_folder_name(message.chat.id))
@@ -563,7 +587,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         # Stage 3 : analyze current audio sample hashes
         managment_msg = await analyze_audio_sample(managment_msg, path_list.normalized_audio_samples(audio_sample_name + ".mp3"), path_list.fingerprint_db())
         # Stage 4 : register current audio sample hashes
-        db_worker = SQLighter(config.database_name)
+        db_worker = SQLighter(config.DATABASE_NAME)
         db_worker.register_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data["audio_sample_name"], user_data["audio_sample_file_info"].file_unique_id)
         db_worker.close()
     except Exception as ex:
@@ -589,10 +613,10 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
 async def f_remove_audio_samples_step_1(message):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("<<< Отмена >>>")
-    for i in get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)]:
-        keyboard.add(str(i))
+    for audio_sample_name in get_user_audio_samples_list(message.chat.id, get_selected_folder_name(message.chat.id)):
+        keyboard.add(audio_sample_name)
     
-    await message.edit_text(f'Количество аудио сэмлов в папке "{get_selected_folder_name(message.chat.id)}": {len(get_user_folders_list(message.chat.id)[get_selected_folder_name(message.chat.id)])}')
+    await message.edit_text(f'Количество аудио сэмлов в папке "{get_selected_folder_name(message.chat.id)}": {len(get_user_audio_samples_list(message.chat.id, get_selected_folder_name(message.chat.id)))}')
     await message.answer("Выберите аудио сэмпл который хотите удалить:", reply_markup=keyboard)
     await Remove_Simples.step_2.set()
     
@@ -609,7 +633,7 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         return 
 
     try:
-        db_worker = SQLighter(config.database_name)
+        db_worker = SQLighter(config.DATABASE_NAME)
         db_worker.unregister_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data['chosen_sample'])
         db_worker.close()
     except KeyError:
@@ -706,6 +730,10 @@ async def error_bot_blocked(update: types.Update, exception: BotBlocked):
     logging.warning(f"Меня заблокировал пользователь!\nСообщение: {update}\nОшибка: {exception}")
     return True
 
+@dp.errors_handler(exception=MessageNotModified)
+async def message_not_modified_handler(update: types.Update, exception: BotBlocked):
+    return True
+
 @dp.message_handler(content_types=types.ContentType.ANY, state='*')
 async def unknown_message(msg: types.Message):
     await msg.reply('Я не знаю, что с этим делать\nЯ просто напомню, что есть команда /help', parse_mode="HTML")
@@ -716,23 +744,9 @@ async def callback_handler(query: types.CallbackQuery, state):
     if answer_data == 'welcome_message':
         await query.answer()
         await main_menu_message(query.message, 'edit')
-    if answer_data == 'set_lang-ru':
-        db_worker = SQLighter(config.database_name)
-        db_worker.set_lang(query.message.chat.id, "Ru")
-        db_worker.close()
-        await query.answer('🎚Настройки : Выбран русский язык 🇷🇺')
-        await main_menu_message(query.message, 'edit')
-    if answer_data == 'set_lang-en':
-        await query.answer('Бот в процесе разработки. В данное время поддерживается только русскии язык', True)
-#        await query.answer('️🎚Setings : Selected English 🇺🇸 language!')
-#        await main_menu_message(query.message, 'edit')
-    if answer_data == 'set_lang-kz':
-        await query.answer('Бот в процесе разработки. В данное время поддерживается только русскии язык', True)
-#        await query.answer('️🎚Setings : Selected Kazakh 🇰🇿 language!')
-#        await main_menu_message(query.message, 'edit')
     if answer_data == 'edit_lang':
         await query.answer()
-        await set_lang_message(query.message, 'edit')
+        await language_settings_message(query.message, 'edit')
     if answer_data == 'folders_list':
         await state.finish()
         await query.answer()
@@ -747,13 +761,13 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         await f_delete_folder_step_1(query.message)
     if answer_data == 'upload_audio_samples':
-        if len(get_user_folders_list(query.message.chat.id)[get_selected_folder_name(query.message.chat.id)]) > 90:
+        if len(get_user_audio_samples_list(query.message.chat.id, get_selected_folder_name(query.message.chat.id))) > 90:
             await query.answer('Список аудио сэмплов превышает 90 сэмплов', True)
             return 
         await query.answer()
         await f_upload_audio_samples_step_1(query.message)
     if answer_data == 'remove_audio_samples':
-        if len(get_user_folders_list(query.message.chat.id)[get_selected_folder_name(query.message.chat.id)]) == 0:
+        if len(get_user_audio_samples_list(query.message.chat.id, get_selected_folder_name(query.message.chat.id))) == 0:
             await query.answer('У вас нету аудио сэмлов', True)
             return
         await query.answer()
@@ -765,7 +779,7 @@ async def callback_handler(query: types.CallbackQuery, state):
         await query.answer()
         await quiz_mode_step_0(query.message)
     if answer_data == 'quiz_mode_1':
-        if len(get_user_folders_list(query.message.chat.id)[get_selected_folder_name(query.message.chat.id)]) == 0:
+        if len(get_user_audio_samples_list(query.message.chat.id, get_selected_folder_name(query.message.chat.id))) == 0:
             await query.answer(f'В папке "{get_selected_folder_name(query.message.chat.id)}" нету аудио сэмлов', True)
             return
         await query.answer()
@@ -778,7 +792,7 @@ async def callback_handler(query: types.CallbackQuery, state):
     for w in get_user_folders_list(query.message.chat.id):
         if answer_data == "set_" + w:
             set_selected_folder_name(query.message.chat.id, str(w))
-            if len(get_user_folders_list(query.message.chat.id)[get_selected_folder_name(query.message.chat.id)]) == 0:
+            if len(get_user_audio_samples_list(query.message.chat.id, get_selected_folder_name(query.message.chat.id))) == 0:
                 await query.answer(f'В папке "{get_selected_folder_name(query.message.chat.id)}" нету аудио сэмлов', True)
                 return
             await query.answer()

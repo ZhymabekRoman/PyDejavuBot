@@ -10,11 +10,11 @@ import string
 import random
 
 # https://stackoverflow.com/a/26853961
-def merge_two_dicts(x, y):
-    """Given two dictionaries, merge them into a new dict as a shallow copy."""
-    z = x.copy()
-    z.update(y)
-    return z
+#def merge_two_dicts(x, y):
+#    """Given two dictionaries, merge them into a new dict as a shallow copy."""
+#    z = x.copy()
+#    z.update(y)
+#    return z
 
 # https://pynative.com/python-generate-random-string/
 def generate_random_string(length):
