@@ -14,7 +14,7 @@ import config
 
 class SQLighter:
 
-    def __init__(self, database=config.DATABASE_NAME):
+    def __init__(self, database=config.DATABASE_PATH):
         self.connection = sqlite3.connect(database)
         self.connection.execute("PRAGMA foreign_keys = ON") # Need for working with foreign keys in db
         self.cursor = self.connection.cursor()
@@ -58,7 +58,7 @@ class SQLighter:
             self.cursor.execute("DELETE FROM folders WHERE folder_id= :0 AND user_id= :1", {'0': folder_id, '1': user_id})
      
     def get_folder_id_by_folder_name(self, user_id, folder_name):
-        """Получаем id папки по названию папки"""
+        """Получаем ID папки по названию папки"""
         with self.connection:
             folder_id = self.cursor.execute("SELECT folder_id FROM folders Where folder_name= :1 AND user_id= :0", {'0': user_id, '1': folder_name}).fetchone()[0]
             return folder_id

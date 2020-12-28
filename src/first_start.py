@@ -32,7 +32,7 @@ audfprint_mode = input("Select the audfprint working mode: \n    0 - Fast audio 
 
 with open("config.py", "w") as file:
     file.write(f"API_TOKEN = '{tlgrm_bot_api}'" + '\n')
-    file.write(f"DATABASE_NAME = '{db_name}.db'" + '\n')
+    file.write(f"DATABASE_PATH = '{db_name}.db'" + '\n')
     file.write(f"audfprint_mode = '{audfprint_mode}'")
     
 print("Done!")
