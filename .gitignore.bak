@@ -58,4 +58,4 @@ tmp.fpdb
 
 config.py
 *.db
-user_data/
+data/

@@ -1,24 +1,25 @@
 import sqlite3
-import os.path
+import os
 import sys
+from other import base64_encode
+
+USER_DATA_PATH="user_data"
 
 print("\n===Config Master===\n")
 
-if os.path.isfile("config.py") is True:
-    print("Configuration file already exists! Exiting...")
+if os.path.isdir(f"{USER_DATA_PATH}/") is True:
+    print("Users data and configuration folder is already exists! Exiting...")
     sys.exit(1)
+else:
+    os.makedirs(USER_DATA_PATH)
 
 # Step 1: database file init 
 db_name = input("Enter database file name (default-myTable): ")
 
 if not db_name: 
     db_name = "myTable"
-
-if os.path.isfile(f"{db_name}.db") is True:
-    print("A database file with this name already exists! Cancelling...")
-    sys.exit(1)
     
-conn = sqlite3.connect(f"{db_name}.db")
+conn = sqlite3.connect(f"{USER_DATA_PATH}/{db_name}.db")
 conn.execute("PRAGMA foreign_keys = 1")
 cur = conn.cursor()
 cur.execute("CREATE TABLE user_data(user_id INTEGER NOT NULL PRIMARY KEY, user_name TEXT NOT NULL, user_lang TEXT, folders TEXT)")
@@ -30,9 +31,14 @@ conn.commit()
 tlgrm_bot_api = input("Enter Telegram bot API token: ")
 audfprint_mode = input("Select the audfprint working mode: \n    0 - Fast audio recognition speed, but worse accuracy\n    1 - High recognition accuracy, but will take longer time\nEnter 0 or 1: ")
 
-with open("config.py", "w") as file:
-    file.write(f"API_TOKEN = '{tlgrm_bot_api}'" + '\n')
-    file.write(f"DATABASE_PATH = '{db_name}.db'" + '\n')
-    file.write(f"audfprint_mode = '{audfprint_mode}'")
+with open(f"{USER_DATA_PATH}/config.py", "w") as file:
+    file.write("# Declare Telegram Bot API token\n")
+    file.write(f"API_TOKEN = '{base64_encode(tlgrm_bot_api)}'\n")
+    file.write("# Declare users data path\n")
+    file.write(f"USER_DATA_PATH = '{USER_DATA_PATH}'\n")
+    file.write("# Declare users database path\n")
+    file.write(f"DATABASE_PATH = '{USER_DATA_PATH}/{db_name}.db'\n")
+    file.write("# Declare audio recognizing mode\n")
+    file.write(f"audfprint_mode = '{audfprint_mode}'\n")
     
 print("Done!")
