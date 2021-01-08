@@ -332,14 +332,15 @@ async def f_step_2(message: types.Message, state: FSMContext):
     await state.finish()
     set_selected_folder_name(message.chat.id, user_data['folder_name'])
     
-    os.makedirs(path.tmp_audio_samples(message.chat.id, get_selected_folder_name(message.chat.id)))
-    os.makedirs(path.non_normalized_audio_samples(message.chat.id, get_selected_folder_name(message.chat.id)))
-    os.makedirs(path.normalized_audio_samples(message.chat.id, get_selected_folder_name(message.chat.id)))
-    os.makedirs(path.tmp_query_audio(message.chat.id, get_selected_folder_name(message.chat.id)))
-    os.makedirs(path.non_normalized_query_audio(message.chat.id, get_selected_folder_name(message.chat.id)))
-    os.makedirs(path.normalized_query_audio(message.chat.id, get_selected_folder_name(message.chat.id)))
+    path = path(message.chat.id)
+    os.makedirs(path_list.tmp_audio_samples())
+    os.makedirs(path.non_normalized_audio_samples())
+    os.makedirs(path.normalized_audio_samples())
+    os.makedirs(path.tmp_query_audio())
+    os.makedirs(path.non_normalized_query_audio())
+    os.makedirs(path.normalized_query_audio())
     try:
-        os.makedirs(path.fingerprint_db_dir_path(message.chat.id))
+        os.makedirs(path_list.fingerprint_db_dir_path())
     except:
         pass
     
@@ -494,7 +495,8 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
     file_id = user_data["audio_sample_file_info"].file_id
     audio_sample_name = f'{user_data["audio_sample_name"]}'
     audio_sample_full_name = f'{user_data["audio_sample_name"]}{user_data["audio_sample_file_extensions"]}'
-            
+    path_list = get_path(message.chat.id)
+
     if len(user_data["audio_sample_name"]) >= 90:
         keyboard_markup = types.InlineKeyboardMarkup()
         back_btn = types.InlineKeyboardButton('«      ', callback_data = get_selected_folder_name(message.chat.id))
@@ -517,7 +519,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         return
      
     await state.finish()
-    managment_msg = await message.reply('Задача поставлена в поток!') #path_list.tmp_audio_samples(audio_sample_full_name)
+    managment_msg = await message.reply('Задача поставлена в поток!')
     
     try:
         # Stage 0 : download file
@@ -527,7 +529,7 @@ async def f_upload_audio_samples_step_3(message: types.Message, state: FSMContex
         # Stage 2 : mormalize audio
         managment_msg = await audio_normalization(managment_msg, path_list.non_normalized_audio_samples(audio_sample_name + ".mp3"), path_list.normalized_audio_samples(audio_sample_name + ".mp3"))
         # Stage 3 : analyze current audio sample hashes
-        managment_msg = await analyze_audio_sample(managment_msg, path_list.normalized_audio_samples(audio_sample_name + ".mp3"), path.fingerprint_db(message.chat.id, get_selected_folder_name(message.chat.id)))
+        managment_msg = await analyze_audio_sample(managment_msg, path_list.normalized_audio_samples(audio_sample_name + ".mp3"), path_list.fingerprint_db())
         # Stage 4 : register current audio sample hashes
         db.register_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data["audio_sample_name"], user_data["audio_sample_file_info"].file_unique_id)
     except Exception as ex:
@@ -565,7 +567,7 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
     await state.update_data(chosen_sample=message.text)
     user_data = await state.get_data()
     await state.finish()
-    path_list = get_path(message.chat.id)
+    path = path(message.chat.id)
 
     if user_data['chosen_sample'] == "<<< Отмена >>>":
         await message.reply("Вы отменили операцию", reply_markup=types.ReplyKeyboardRemove())
@@ -580,7 +582,7 @@ async def f_remove_audio_samples_step_2(message: types.Message, state: FSMContex
         return
 
     await message.reply(f'Сэмпл "{user_data["chosen_sample"]}" в процесе удаления ...', reply_markup=types.ReplyKeyboardRemove())
-    await delete_audio_hashes(message, path.fingerprint_db(message.chat.id, get_selected_folder_name(message.chat.id)), path_list.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
+    await delete_audio_hashes(message, path_list.fingerprint_db(), path.normalized_audio_samples(user_data['chosen_sample'] + ".mp3"))
     
     keyboard_markup = types.InlineKeyboardMarkup()
     manage_folder_menu_message_btn = types.InlineKeyboardButton('« Вернутся к текущей папке', callback_data= get_selected_folder_name(message.chat.id))
@@ -607,7 +609,8 @@ async def quiz_mode_step_1(message: types.Message, back_btn = "folder_manager"):
 @dp.message_handler(state = Upload_Queries.step_1, content_types=types.ContentTypes.VOICE)
 async def quiz_mode_step_2(message: types.Message, state: FSMContext):
     file_id = message.voice.file_id
-    
+    path_list = get_path(message.chat.id)
+
     if message.voice.mime_type == "audio/ogg":
         audio_sample_file_extensions =  ".ogg"
     else:
@@ -628,13 +631,13 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
     
     try:
         # Stage 0 : download file
-        managment_msg = await download_file(managment_msg, file_id, path.tmp_query_audio(message.chat.id, get_selected_folder_name(message.chat.id), query_audio_full_name))
+        managment_msg = await download_file(managment_msg, file_id, path_list.tmp_query_audio(query_audio_full_name))
         # Stage 1 : check audio files for integrity and convert them
-        managment_msg = await check_audio_integrity_and_convert(managment_msg, path.tmp_query_audio(message.chat.id, get_selected_folder_name(message.chat.id), query_audio_full_name), path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
+        managment_msg = await check_audio_integrity_and_convert(managment_msg, path_list.tmp_query_audio(query_audio_full_name), path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
         # Stage 2 : mormalize audio
         managment_msg = await audio_normalization(managment_msg, path_list.non_normalized_query_audio(query_audio_name + ".mp3"), path_list.normalized_query_audio(query_audio_name + ".mp3"))
         # Stage 3 : match audio query
-        managment_msg = await match_audio_query(managment_msg, path_list.normalized_query_audio(query_audio_name + ".mp3"), path.fingerprint_db(message.chat.id, get_selected_folder_name(message.chat.id)))
+        managment_msg = await match_audio_query(managment_msg, path_list.normalized_query_audio(query_audio_name + ".mp3"), path_list.fingerprint_db())
     except:
         await folder_list_menu_message(message, 'start')
         return
@@ -647,7 +650,7 @@ async def quiz_mode_step_2(message: types.Message, state: FSMContext):
         await message.reply(f'Аудио запись успешно распознана', reply_markup=keyboard_markup)
     finally:
         try:
-            os.remove(path.tmp_query_audio(message.chat.id, get_selected_folder_name(message.chat.id), query_audio_full_name))
+            os.remove(path_list.tmp_query_audio(query_audio_full_name))
             os.remove(path_list.non_normalized_query_audio(query_audio_name + ".mp3"))
             os.remove(path_list.normalized_query_audio(query_audio_name + ".mp3"))
         except:
