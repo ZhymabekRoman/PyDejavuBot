@@ -142,7 +142,7 @@ class HashTable(object):
             associate with the given hash as rows.
         """
         vals = self.table[hash_, :min(self.depth, self.counts[hash_])]
-        maxtimemask = (1 << self.matimebits) - 1
+        maxtimemask = (1 << self.maxtimebits) - 1
         # ids we report externally start at 0, but in table they start at 1.
         ids = (vals >> self.maxtimebits) - 1
         return np.c_[ids, vals & maxtimemask].astype(np.int32)

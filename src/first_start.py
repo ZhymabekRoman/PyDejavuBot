@@ -13,12 +13,12 @@ if os.path.isdir(f"{USER_DATA_PATH}/") is True:
 else:
     os.makedirs(USER_DATA_PATH)
 
-# Step 1: database file init 
+# Step 1: database file init
 db_name = input("Enter database file name (default-myTable): ")
 
-if not db_name: 
+if not db_name:
     db_name = "myTable"
-    
+
 conn = sqlite3.connect(f"{USER_DATA_PATH}/{db_name}.db")
 conn.execute("PRAGMA foreign_keys = 1")
 cur = conn.cursor()
@@ -29,7 +29,7 @@ conn.commit()
 
 # Step 2: configuration file init
 tlgrm_bot_api = input("Enter Telegram bot API token: ")
-audfprint_mode = input("Select the audfprint working mode: \n    0 - Fast audio recognition speed, but worse accuracy\n    1 - High recognition accuracy, but will take longer time\nEnter 0 or 1: ")
+audfprint_mode = input("Select the audfprint working mode: \n    1 - Fast audio recognition speed, but worse accuracy\n    0 - High recognition accuracy, but will take longer time\nEnter 0 or 1: ")
 
 with open(f"{USER_DATA_PATH}/config.py", "w") as file:
     file.write("# Declare Telegram Bot API token\n")

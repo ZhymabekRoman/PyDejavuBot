@@ -10,7 +10,10 @@ import string
 import random
 import base64
 from dataclasses import dataclass
-from user_data import config
+try:
+    from user_data import config
+except ImportError:
+    pass # Fixme
 
 # https://pynative.com/python-generate-random-string/
 def generate_random_string(length: int) -> str:
@@ -22,26 +25,22 @@ def generate_random_string(length: int) -> str:
 class path:
     """Возвращяет путь к личным папкам пользывателей, а-ля конструктор путей"""
     user_id: str
-    user_folder: str
+    user_folder: str = ""
 
-    def tmp_audio_samples(file_name = "") -> str:
+    def tmp_audio_samples(self, file_name = "") -> str:
         return f'{config.USER_DATA_PATH}/audio_sample/tmp/{self.user_id}/{self.user_folder}/{file_name}'
-    def non_normalized_audio_samples(file_name = "") -> str:
-        return f'{config.USER_DATA_PATH}/audio_sample/non_normalized/{self.user_id}/{self.user_folder}/{file_name}'
-    def normalized_audio_samples(file_name = "") -> str:
-        return f'{config.USER_DATA_PATH}/audio_sample/normalized/{self.user_id}/{self.user_folder}/{file_name}'
-        
-    def tmp_query_audio(file_name = "") -> str:
+    def processed_audio_samples(self, file_name = "") -> str:
+        return f'{config.USER_DATA_PATH}/audio_sample/processed/{self.user_id}/{self.user_folder}/{file_name}'
+
+    def tmp_query_audio(self, file_name = "") -> str:
         return f'{config.USER_DATA_PATH}/query/tmp/{self.user_id}/{self.user_folder}/{file_name}'
-    def non_normalized_query_audio(file_name = "") -> str:
-        return f'{config.USER_DATA_PATH}/query/non_normalized/{self.user_id}/{self.user_folder}/{file_name}'
-    def normalized_query_audio(file_name = "") -> str:
-        return f'{config.USER_DATA_PATH}/query/normalized/{self.user_id}/{self.user_folder}/{file_name}'
+    def processed_query_audio(self, file_name = "") -> str:
+        return f'{config.USER_DATA_PATH}/query/processed/{self.user_id}/{self.user_folder}/{file_name}'
     
-    def fingerprint_db() -> str:
-        return f'{config.USER_DATA_PATH}/audio_samples/fingerprint_db/{self.user_id}/{self.user_folder}.fpdb'
-    def fingerprint_db_dir_path() -> str:
-        return f'{config.USER_DATA_PATH}/audio_samples/fingerprint_db/{self.user_id}/'
+    def fingerprint_db(self) -> str:
+        return f'{config.USER_DATA_PATH}/audio_sample/fingerprint_db/{self.user_id}/{self.user_folder}.fpdb'
+    def fingerprint_db_dir_path(self) -> str:
+        return f'{config.USER_DATA_PATH}/audio_sample/fingerprint_db/{self.user_id}/'
 
 # Не помню откуда взял этот код =)
 def check_string_for_except_chars(string: str) -> str:
