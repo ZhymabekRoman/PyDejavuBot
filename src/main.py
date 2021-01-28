@@ -349,7 +349,7 @@ async def manage_folder_menu_message(call: types.CallbackQuery, callback_data: d
     keyboard_markup.row(upload_audio_samples_btn)
     remove_audio_samples_btn = types.InlineKeyboardButton('Удалить аудио сэмплы', callback_data=remove_audio_sample_cb.new(folder_name))
     keyboard_markup.row(remove_audio_samples_btn)
-    quiz_mode_btn = types.InlineKeyboardButton('Режим Викторины', callback_data= 'quiz_mode_1')
+    quiz_mode_btn = types.InlineKeyboardButton('Режим Викторины', callback_data=recognize_query_cb.new(folder_name))
     keyboard_markup.row(quiz_mode_btn)
     delete_btn = types.InlineKeyboardButton('Удалить папкy', callback_data=remove_folder_cb.new(folder_name))
     keyboard_markup.row(delete_btn)
@@ -583,11 +583,11 @@ async def remove_audio_sample_step_1_message(message: types.Message, state: FSMC
     try:
         db.unregister_audio_sample(message.chat.id, get_selected_folder_name(message.chat.id), user_data['chosen_sample'])
         
-        if len(db.select_user_audio_samples_list(message.chat.id, get_selected_folder_name(message.chat.id))) == 1:
-            os.remove(path_list.fingerprint_db())
-            logging.info("Deliting fingerprint file")
-        else:
-            await delete_audio_hashes(managment_msg, path_list.fingerprint_db(), path_list.processed_audio_samples(user_data['chosen_sample'] + ".mp3"))
+        #if len(db.select_user_audio_samples_list(message.chat.id, get_selected_folder_name(message.chat.id))) == 1:
+        #    os.remove(path_list.fingerprint_db())
+        #    logging.info("Deliting fingerprint file")
+        #else:
+        await delete_audio_hashes(managment_msg, path_list.fingerprint_db(), path_list.processed_audio_samples(user_data['chosen_sample'] + ".mp3"))
     except Exception as ex:
         logging.exception(ex)
         keyboard_markup = types.InlineKeyboardMarkup()
@@ -605,7 +605,7 @@ async def remove_audio_sample_step_1_message(message: types.Message, state: FSMC
         await message.reply(f'Аудио сэмпл с названием "{user_data["chosen_sample"]}" успешно удален', reply_markup=keyboard_markup)
 
 
-@dp.callback_query_handler(remove_audio_sample_cb.filter(), state='*')
+@dp.callback_query_handler(recognize_query_cb.filter(), state='*')
 async def recognize_query_message(call: types.CallbackQuery, callback_data: dict):
     folder_name = callback_data['folder_name']
     

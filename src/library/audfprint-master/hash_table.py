@@ -20,7 +20,7 @@ import scipy.io
 
 if sys.version_info[0] >= 3:
     # Python 3 specific definitions
-    import pickle  # Py3
+    import hickle as pickle  # Py3
     basestring = (str, bytes)  # Py3
     pickle_options = {'encoding': 'latin1'}
 else:
@@ -183,8 +183,8 @@ class HashTable(object):
         if params:
             for key in params:
                 self.params[key] = params[key]
-        f = file_object or gzip.open(name, 'wb')
-        pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+        #f = file_object or gzip.open(name, 'wb')
+        pickle.dump(self, name, mode='w', chunks=True)
         self.dirty = False
         nhashes = sum(self.counts)
         # Report the proportion of dropped hashes (overfull table)
@@ -209,8 +209,8 @@ class HashTable(object):
 
     def load_pkl(self, name, file_object=None):
         """ Read hash table values from pickle file <name>. """
-        f = file_object or gzip.open(name, 'rb')
-        temp = pickle.load(f, **pickle_options)
+        #f = file_object or gzip.open(name, 'rb')
+        temp = pickle.load(name)
         if temp.ht_version < HT_OLD_COMPAT_VERSION:
             raise ValueError('Version of ' + name + ' is ' + str(temp.ht_version)
                              + ' which is not at least ' +

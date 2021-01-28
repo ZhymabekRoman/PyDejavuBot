@@ -5,3 +5,4 @@ joblib
 psutil
 aiogram
 ffmpeg-normalize
+hickle
