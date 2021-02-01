@@ -654,8 +654,8 @@ async def recognize_query_step_1_message(message: types.Message, state: FSMConte
         return
     else:
         keyboard_markup = types.InlineKeyboardMarkup()
-        manage_folder_menu_message_btn = types.InlineKeyboardButton('« Вернутся к текущей папке  ', callback_data= get_selected_folder_name(message.chat.id))
-        upload_sample_btn = types.InlineKeyboardButton('» Распознать еще одну запись', callback_data= 'quiz_mode_1')
+        manage_folder_menu_message_btn = types.InlineKeyboardButton('« Вернутся к текущей папке  ', callback_data=manage_folder_cb.new(get_selected_folder_name(message.chat.id)))
+        upload_sample_btn = types.InlineKeyboardButton('» Распознать еще одну запись', callback_data=recognize_query_cb.new(get_selected_folder_name(message.chat.id)))
         keyboard_markup.row(manage_folder_menu_message_btn)
         keyboard_markup.row(upload_sample_btn)
         await message.reply('Аудио запись распознана', reply_markup=keyboard_markup)
